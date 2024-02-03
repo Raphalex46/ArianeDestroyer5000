@@ -126,6 +126,12 @@ isValid game@Game {..} (src, dst)
         sign = case turn of
           White -> 1
           Black -> -1
+    isValid' Game {..} (xs, ys) (xd, yd) Rook
+      | xs == xd || ys == yd = all isEmpty inBetween
+      | otherwise = False
+      where
+        inBetween =[board ! (x, y) | x <- [(min xs xd)..(max xs xd)], y <- [(min ys yd)..(max yd ys)], (x /=xd || y /= yd) && (x/=xs || y /= ys)]
+
     isValid' _ _ _ _ = True
 
 showGame :: Game -> String
