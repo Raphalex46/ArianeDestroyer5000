@@ -126,13 +126,30 @@ isValid game@Game {..} (src, dst)
         sign = case turn of
           White -> 1
           Black -> -1
-    isValid' Game {..} (xs, ys) (xd, yd) Rook
-      | xs == xd || ys == yd = all isEmpty inBetween
-      | otherwise = False
+    isValid' Game {..} (xs, ys) (xd, yd) Rook =
+      (xs == xd || ys == yd) && all isEmpty inBetween
       where
-        inBetween =[board ! (x, y) | x <- [(min xs xd)..(max xs xd)], y <- [(min ys yd)..(max yd ys)], (x /=xd || y /= yd) && (x/=xs || y /= ys)]
+        inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
+        signX = signum $ xd - xs
+        signY = signum $ yd - ys
 
-    isValid' _ _ _ _ = True
+    isValid' Game {..} (xs, ys) (xd, yd) Bishop =
+      abs(xd - xs) == abs(yd - ys) && all isEmpty inBetween
+      where
+        inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
+        signX = signum $ xd - xs
+        signY = signum $ yd - ys
+
+    isValid' _ (xs, ys) (xd, yd) Knight =
+      (diffX == 1 && diffY == 2) || (diffX == 2 && diffY == 1)
+      where
+        diffX = abs $ xd -xs
+        diffY = abs $ yd - ys
+    isValid' _ _ _ Queen =
+      isValid' game src dst Bishop || isValid' game src dst Rook
+
+    isValid' _ (xs, ys) (xd, yd) King =
+      ((abs $ xd - xs) <= 1) && ((abs $ yd - ys) <= 1)
 
 showGame :: Game -> String
 showGame game =
