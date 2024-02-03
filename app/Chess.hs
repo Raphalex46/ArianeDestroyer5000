@@ -82,7 +82,8 @@ data Game = Game
     turnNum :: Int,
     turn :: Color,
     lastMove :: Maybe Move,
-    canCastle :: Color -> Bool
+    canCastle :: Color -> Bool,
+    kingChecked :: Maybe Color
   }
 
 startGame :: Game
@@ -92,7 +93,8 @@ startGame =
       turnNum = 1,
       turn = White,
       lastMove = Nothing,
-      canCastle = (\_ -> True)
+      canCastle = (\_ -> True),
+      kingChecked = Nothing
     }
 
 isEnPassant :: Board -> Move -> Bool
@@ -105,51 +107,63 @@ isValid game@Game {..} (src, dst)
   | isCol dstSquare turn = False
   | otherwise = case srcSquare of
       Empty -> False
-      Occ (Piece (_, ty)) -> isValid' game src dst ty
+      Occ (Piece (_, ty)) -> isValidMovement game src dst ty
   where
     srcSquare = board ! src
     dstSquare = board ! dst
-    isValid' Game {..} (xs, ys) dst@(xd, yd) Pawn
-      | xs == xd = case sign * (yd - ys) of
-          1 -> isEmpty $ board ! (xd, yd)
-          2 -> ys == pawnStartRank turn && isEmpty (board ! (xs, ys + sign))
-          _ -> False
-      | abs (xd - xs) == 1 && yd - ys == sign =
-          case board ! dst of
-            Occ (Piece (col, _)) -> col == cycleCol turn
-            Empty -> case lastMove of
-              Nothing -> False
-              Just ((oxs, oys), dstEP@(oxd, oyd)) ->
-                oxs == oxd && oxs == xd && oys == (pawnStartRank $ cycleCol turn) && oyd == oys - sign * 2 && isType (board ! dstEP) Pawn
-      | otherwise = False
-      where
-        sign = case turn of
-          White -> 1
-          Black -> -1
-    isValid' Game {..} (xs, ys) (xd, yd) Rook =
-      (xs == xd || ys == yd) && all isEmpty inBetween
-      where
-        inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
-        signX = signum $ xd - xs
-        signY = signum $ yd - ys
 
-    isValid' Game {..} (xs, ys) (xd, yd) Bishop =
-      abs(xd - xs) == abs(yd - ys) && all isEmpty inBetween
-      where
-        inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
-        signX = signum $ xd - xs
-        signY = signum $ yd - ys
+isValidMovement :: Game -> Coord -> Coord -> PieceType -> Bool
+isValidMovement Game {..} (xs, ys) dst@(xd, yd) Pawn
+  | xs == xd = case sign * (yd - ys) of
+      1 -> isEmpty $ board ! (xd, yd)
+      2 -> ys == pawnStartRank turn && isEmpty (board ! (xs, ys + sign))
+      _ -> False
+  | abs (xd - xs) == 1 && yd - ys == sign =
+      case board ! dst of
+        Occ (Piece (col, _)) -> col == cycleCol turn
+        Empty -> case lastMove of
+          Nothing -> False
+          Just ((oxs, oys), dstEP@(oxd, oyd)) ->
+            oxs == oxd && oxs == xd && oys == (pawnStartRank $ cycleCol turn) && oyd == oys - sign * 2 && isType (board ! dstEP) Pawn
+  | otherwise = False
+  where
+    sign = case turn of
+      White -> 1
+      Black -> -1
+isValidMovement Game {..} (xs, ys) (xd, yd) Rook =
+  (xs == xd || ys == yd) && all isEmpty inBetween
+  where
+    inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
+    signX = signum $ xd - xs
+    signY = signum $ yd - ys
 
-    isValid' _ (xs, ys) (xd, yd) Knight =
-      (diffX == 1 && diffY == 2) || (diffX == 2 && diffY == 1)
-      where
-        diffX = abs $ xd -xs
-        diffY = abs $ yd - ys
-    isValid' _ _ _ Queen =
-      isValid' game src dst Bishop || isValid' game src dst Rook
+isValidMovement Game {..} (xs, ys) (xd, yd) Bishop =
+  abs(xd - xs) == abs(yd - ys) && all isEmpty inBetween
+  where
+    inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
+    signX = signum $ xd - xs
+    signY = signum $ yd - ys
 
-    isValid' _ (xs, ys) (xd, yd) King =
-      ((abs $ xd - xs) <= 1) && ((abs $ yd - ys) <= 1)
+isValidMovement _ (xs, ys) (xd, yd) Knight =
+  (diffX == 1 && diffY == 2) || (diffX == 2 && diffY == 1)
+  where
+    diffX = abs $ xd -xs
+    diffY = abs $ yd - ys
+isValidMovement game src dst Queen =
+  isValidMovement game src dst Bishop || isValidMovement game src dst Rook
+
+isValidMovement _ (xs, ys) (xd, yd) King =
+  ((abs $ xd - xs) <= 1) && ((abs $ yd - ys) <= 1)
+
+whoIsChecked :: Game -> Maybe Color
+whoIsChecked game@Game{..} =
+  if whoIsChecked' White then Just White else if whoIsChecked' Black then Just
+  Black else Nothing
+  where
+  whoIsChecked' col =
+    let kingPos = [pos | (pos, Occ (Piece (c, King))) <- assocs board, c == col]
+        oppPiecesPos = [pos | (pos, Occ (Piece (c, _))) <- assocs board, c /= col]
+      in any (flip (isValidMovement game)) kingPos oppPiecesPos
 
 showGame :: Game -> String
 showGame game =
