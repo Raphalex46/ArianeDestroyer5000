@@ -20,8 +20,7 @@ interactLoop game =
             { board = playMove gBoard move,
               turn = cycleCol gTurn :: Color,
               turnNum = gTurnNum + 1,
-              lastMove = Just move,
-              kingChecked = whoIsChecked game
+              lastMove = Just move
             }
 
 main :: IO ()

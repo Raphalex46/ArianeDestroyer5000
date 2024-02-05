@@ -75,6 +75,10 @@ isType :: Square -> PieceType -> Bool
 isType Empty _ = False
 isType (Occ (Piece (_, pty))) ty = pty == ty
 
+getType :: Square -> Maybe PieceType
+getType Empty = Nothing
+getType (Occ (Piece (_, ty))) = Just ty
+
 type Board = Array Coord Square
 
 data Game = Game
@@ -82,8 +86,7 @@ data Game = Game
     turnNum :: Int,
     turn :: Color,
     lastMove :: Maybe Move,
-    canCastle :: Color -> Bool,
-    kingChecked :: Maybe Color
+    canCastle :: Color -> Bool
   }
 
 startGame :: Game
@@ -93,8 +96,7 @@ startGame =
       turnNum = 1,
       turn = White,
       lastMove = Nothing,
-      canCastle = (\_ -> True),
-      kingChecked = Nothing
+      canCastle = (\_ -> True)
     }
 
 isEnPassant :: Board -> Move -> Bool
@@ -102,15 +104,16 @@ isEnPassant board (src@(xs, _), dst@(xd, _)) =
   isType (board ! src) Pawn && isEmpty (board ! dst) && xs /= xd
 
 isValid :: Game -> Move -> Bool
-isValid game@Game {..} (src, dst)
+isValid game@Game {..} move@(src, dst)
   | isCol srcSquare $ cycleCol turn = False
   | isCol dstSquare turn = False
   | otherwise = case srcSquare of
       Empty -> False
-      Occ (Piece (_, ty)) -> isValidMovement game src dst ty
+      Occ (Piece (_, ty)) -> isValidMovement game src dst ty && (not $ isChecked tempGame turn)
   where
     srcSquare = board ! src
     dstSquare = board ! dst
+    tempGame = game {board=playMove board move}
 
 isValidMovement :: Game -> Coord -> Coord -> PieceType -> Bool
 isValidMovement Game {..} (xs, ys) dst@(xd, yd) Pawn
@@ -155,25 +158,34 @@ isValidMovement game src dst Queen =
 isValidMovement _ (xs, ys) (xd, yd) King =
   ((abs $ xd - xs) <= 1) && ((abs $ yd - ys) <= 1)
 
-whoIsChecked :: Game -> Maybe Color
-whoIsChecked game@Game{..} =
-  if whoIsChecked' White then Just White else if whoIsChecked' Black then Just
-  Black else Nothing
+isChecked :: Game -> Color -> Bool
+isChecked game@Game{..} col =
+  let kingPos = head [pos | (pos, Occ (Piece (c, King))) <- assocs board, c == col]
+      oppPiecesPos = [pos | (pos, Occ (Piece (c, _))) <- assocs board, c /= col]
+  in any (\x -> isValidMovement game x kingPos (unwrapType (board ! x))) oppPiecesPos
   where
-  whoIsChecked' col =
-    let kingPos = [pos | (pos, Occ (Piece (c, King))) <- assocs board, c == col]
-        oppPiecesPos = [pos | (pos, Occ (Piece (c, _))) <- assocs board, c /= col]
-      in any (flip (isValidMovement game)) kingPos oppPiecesPos
+    unwrapType sq =
+      case getType sq of
+        Nothing -> error "Used getype on empty square!"
+        Just x -> x
+    
 
 showGame :: Game -> String
 showGame game =
-  unlines
+  let kingChecked = case map (isChecked game) [White, Black] of
+
+                              [True, False] -> Just White
+                              [False, True] -> Just Black
+                              [False, False] -> Nothing
+                              _ -> error "Both kings cannot be in check at once"
+  in unlines
     [ showBoard $ board game,
       "turn number: " ++ (show $ turnNum game),
       "turn: " ++ (show $ turn game),
       "last move: " ++ (show $ lastMove game),
       "white can castle: " ++ (show $ canCastle game White),
-      "black can castle: " ++ (show $ canCastle game Black)
+      "black can castle: " ++ (show $ canCastle game Black),
+      "color of king in check: " ++ (show $ kingChecked)
     ]
 
 startBoard :: Board
