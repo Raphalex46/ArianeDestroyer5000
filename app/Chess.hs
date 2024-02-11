@@ -47,6 +47,10 @@ cycleCol c
   | c == maxBound = minBound
   | otherwise = succ c
 
+startRank :: Color -> Int
+startRank White = 0
+startRank Black = 7
+
 pawnStartRank :: Color -> Int
 pawnStartRank White = 1
 pawnStartRank Black = 6
@@ -99,9 +103,21 @@ startGame =
       canCastle = (\_ -> True)
     }
 
+inBetween :: Coord -> Coord -> [Coord]
+inBetween (xs, ys) (xd, yd) =
+  [(x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
+    where
+      signX  = signum $ xd - xs
+      signY  = signum $ yd - ys
+
+
 isEnPassant :: Board -> Move -> Bool
 isEnPassant board (src@(xs, _), dst@(xd, _)) =
   isType (board ! src) Pawn && isEmpty (board ! dst) && xs /= xd
+
+isCastle :: Board -> Move -> Bool
+isCastle board (src@(xs, ys), dst@(xd, yd)) =
+  isType (board ! src) King && (abs $ xd - xs) == 2
 
 isValid :: Game -> Move -> Bool
 isValid game@Game {..} move@(src, dst)
@@ -133,19 +149,11 @@ isValidMovement Game {..} (xs, ys) dst@(xd, yd) Pawn
     sign = case turn of
       White -> 1
       Black -> -1
-isValidMovement Game {..} (xs, ys) (xd, yd) Rook =
-  (xs == xd || ys == yd) && all isEmpty inBetween
-  where
-    inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
-    signX = signum $ xd - xs
-    signY = signum $ yd - ys
+isValidMovement Game {..} src@(xs, ys) dst@(xd, yd) Rook =
+  (xs == xd || ys == yd) && (all isEmpty $ map (board !) $ inBetween src dst)
 
-isValidMovement Game {..} (xs, ys) (xd, yd) Bishop =
-  abs(xd - xs) == abs(yd - ys) && all isEmpty inBetween
-  where
-    inBetween = [board ! (x, y) | (x, y) <- takeWhile (/= (xd, yd)) $ zip [xs + signX, xs + 2 * signX..] [ys + signY, ys + 2 * signY..]]
-    signX = signum $ xd - xs
-    signY = signum $ yd - ys
+isValidMovement Game {..} src@(xs, ys) dst@(xd, yd) Bishop =
+  abs(xd - xs) == abs(yd - ys) && (all isEmpty $ map (board !) $ inBetween src dst)
 
 isValidMovement _ (xs, ys) (xd, yd) Knight =
   (diffX == 1 && diffY == 2) || (diffX == 2 && diffY == 1)
@@ -155,8 +163,16 @@ isValidMovement _ (xs, ys) (xd, yd) Knight =
 isValidMovement game src dst Queen =
   isValidMovement game src dst Bishop || isValidMovement game src dst Rook
 
-isValidMovement _ (xs, ys) (xd, yd) King =
-  ((abs $ xd - xs) <= 1) && ((abs $ yd - ys) <= 1)
+isValidMovement game@Game{..} src@(xs, ys) dst@(xd, yd) King
+  | moveDistanceX <= 1 && moveDistanceY <= 1 = True
+  | moveDistanceX == 2 && moveDistanceY == 0 && ys == startRank turn =
+    all id $ map (\x -> checkCastleSquare x (board ! x)) $ dst:inBetween src dst
+  | otherwise = False
+  where
+    moveDistanceX = abs $ xd - xs
+    moveDistanceY = abs $ yd - ys
+    checkCastleSquare coord square =
+      isEmpty square && (not $ isChecked game{board=(board // [(src, Empty), (coord, Occ $ Piece (turn, King))])} turn)
 
 isChecked :: Game -> Color -> Bool
 isChecked game@Game{..} col =
@@ -212,11 +228,18 @@ playMove :: Board -> Move -> Board
 playMove board move@(src, dst)
   | not $ inBounds' src = error "Source coordinate of move is out of bounds!"
   | not $ inBounds' dst = error "Destination coordinate of move is out of bounds! "
-  | isEnPassant board move = let ((_, ys), (xd, _)) = move in board // [(src, Empty), (dst, newS), ((xd, ys), Empty)]
+  | isEnPassant board move = board // [(src, Empty), (dst, newS), ((xd, ys), Empty)]
+  | isCastle board move = let signX = signum $ xd - xs
+                              row = ys
+                              rookPosS = (if signX < 0 then 0 else 7, row)
+                              rookPosD = (xd - signX, row)
+                             in board // [(src, Empty), (dst, newS), (rookPosS, Empty), (rookPosD, board ! rookPosS)]
+
   | otherwise = board // [(src, Empty), (dst, newS)]
   where
     inBounds' = (flip inBounds) (snd $ bounds board)
     newS = board ! src
+    ((xs, ys), (xd, yd)) = move
 
 showBoard :: Board -> String
 showBoard board =
