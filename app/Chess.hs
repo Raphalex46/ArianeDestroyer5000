@@ -184,6 +184,16 @@ isChecked game@Game{..} col =
       case getType sq of
         Nothing -> error "Used getype on empty square!"
         Just x -> x
+
+isCheckMated :: Game -> Color -> Bool
+isCheckMated game@Game{..} col
+  | isChecked game col =
+    let moves = [(src, dst) | src <- indices board, dst <- indices board]
+    in
+    case filter (isValid game) moves of
+      [] -> True
+      _ -> False
+  | otherwise = False
     
 
 showGame :: Game -> String
