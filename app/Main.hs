@@ -14,7 +14,7 @@ interactLoop game =
         move <- fmap fromString getLine
         interactLoop' move
       where
-        interactLoop' move@(src, dst)
+        interactLoop' move@(src, dst, prom)
           | isValid game move =
             let isKingMove = isType (gBoard ! src) King
                 isRookMove = isType (gBoard ! src) Rook

@@ -26,11 +26,26 @@ inBounds (i, j) (upperH, upperW) =
 
 data PieceType = Pawn | Rook | Knight | Bishop | Queen | King deriving (Eq)
 
-type Move = (Coord, Coord)
+pieceFromString :: String -> PieceType
+pieceFromString "q" = Queen
+pieceFromString "k" = King
+pieceFromString "r" = Rook
+pieceFromString "b" = Bishop
+pieceFromString "n" = Knight
+pieceFromString "p" = Pawn
+pieceFromString _ = error "Unknown piece"
+
+type Move = (Coord, Coord, Maybe PieceType)
 
 fromString :: String -> Move
-fromString [i, j, x, y] = ((letter2Coord i, read [j] - 1), (letter2Coord x, read [y] - 1))
-fromString _ = error "Invalid move"
+fromString str =
+  case str of
+    [i, j, x, y] -> let (src, dst) = fromString' str in (src, dst, Nothing)
+    [i, j, x, y, p] -> let (src, dst) = fromString' [i, j, x, y] in (src, dst, Just $ pieceFromString [p])
+    _ -> error "Invalid Move"
+  where
+    fromString' [i, j, x, y] = ((letter2Coord i, read [j] - 1),
+        (letter2Coord x, read [y] - 1))
 
 instance Show PieceType where
   show Pawn = "P"
@@ -112,58 +127,67 @@ inBetween (xs, ys) (xd, yd) =
 
 
 isEnPassant :: Board -> Move -> Bool
-isEnPassant board (src@(xs, _), dst@(xd, _)) =
+isEnPassant board (src@(xs, _), dst@(xd, _), Nothing) =
   isType (board ! src) Pawn && isEmpty (board ! dst) && xs /= xd
+isEnPassant _ (_, _, Just _) = False
 
 isCastle :: Board -> Move -> Bool
-isCastle board (src@(xs, ys), dst@(xd, yd)) =
+isCastle board (src@(xs, ys), dst@(xd, yd), Nothing) =
   isType (board ! src) King && (abs $ xd - xs) == 2
+isCastle _ (_, _, Just _) = False
 
 isValid :: Game -> Move -> Bool
-isValid game@Game {..} move@(src, dst)
+isValid game@Game {..} move@(src, dst, prom)
   | isCol srcSquare $ cycleCol turn = False
-  | isCol dstSquare turn = False
+  | isCol dstSquare turn || isType dstSquare King = False
   | otherwise = case srcSquare of
       Empty -> False
-      Occ (Piece (_, ty)) -> isValidMovement game src dst ty && (not $ isChecked tempGame turn)
+      Occ (Piece (_, ty)) -> isValidMovement game src dst prom ty && (not $ isChecked tempGame turn)
   where
     srcSquare = board ! src
     dstSquare = board ! dst
     tempGame = game {board=playMove board move}
 
-isValidMovement :: Game -> Coord -> Coord -> PieceType -> Bool
-isValidMovement Game {..} (xs, ys) dst@(xd, yd) Pawn
+isValidMovement :: Game -> Coord -> Coord -> Maybe PieceType -> PieceType -> Bool
+isValidMovement Game {..} (xs, ys) dst@(xd, yd) prom Pawn
   | xs == xd = case sign * (yd - ys) of
-      1 -> isEmpty $ board ! (xd, yd)
+      1 -> (isEmpty $ board ! (xd, yd)) && checkProm prom
       2 -> ys == pawnStartRank turn && isEmpty (board ! (xs, ys + sign))
       _ -> False
   | abs (xd - xs) == 1 && yd - ys == sign =
       case board ! dst of
-        Occ (Piece (col, _)) -> col == cycleCol turn
+        Occ (Piece (col, _)) -> col == cycleCol turn && checkProm prom
         Empty -> case lastMove of
           Nothing -> False
-          Just ((oxs, oys), dstEP@(oxd, oyd)) ->
+          Just ((oxs, oys), dstEP@(oxd, oyd), Nothing) ->
             oxs == oxd && oxs == xd && oys == (pawnStartRank $ cycleCol turn) && oyd == oys - sign * 2 && isType (board ! dstEP) Pawn
+          Just (_, _, Just _) -> False
   | otherwise = False
   where
     sign = case turn of
       White -> 1
       Black -> -1
-isValidMovement Game {..} src@(xs, ys) dst@(xd, yd) Rook =
+    lastRank = case turn of
+      White -> 7
+      Black -> 0
+    checkProm Nothing = yd /= lastRank
+    checkProm (Just pieceType) = yd == lastRank && pieceType /= King && pieceType /= Pawn
+
+isValidMovement Game {..} src@(xs, ys) dst@(xd, yd) Nothing Rook =
   (xs == xd || ys == yd) && (all isEmpty $ map (board !) $ inBetween src dst)
 
-isValidMovement Game {..} src@(xs, ys) dst@(xd, yd) Bishop =
+isValidMovement Game {..} src@(xs, ys) dst@(xd, yd) Nothing Bishop =
   abs(xd - xs) == abs(yd - ys) && (all isEmpty $ map (board !) $ inBetween src dst)
 
-isValidMovement _ (xs, ys) (xd, yd) Knight =
+isValidMovement _ (xs, ys) (xd, yd) Nothing Knight =
   (diffX == 1 && diffY == 2) || (diffX == 2 && diffY == 1)
   where
     diffX = abs $ xd -xs
     diffY = abs $ yd - ys
-isValidMovement game src dst Queen =
-  isValidMovement game src dst Bishop || isValidMovement game src dst Rook
+isValidMovement game src dst Nothing Queen =
+  isValidMovement game src dst Nothing Bishop || isValidMovement game src dst Nothing Rook
 
-isValidMovement game@Game{..} src@(xs, ys) dst@(xd, yd) King
+isValidMovement game@Game{..} src@(xs, ys) dst@(xd, yd) Nothing King
   | moveDistanceX <= 1 && moveDistanceY <= 1 = True
   | moveDistanceX == 2 && moveDistanceY == 0 && ys == startRank turn =
     all id $ map (\x -> checkCastleSquare x (board ! x)) $ dst:inBetween src dst
@@ -176,19 +200,28 @@ isValidMovement game@Game{..} src@(xs, ys) dst@(xd, yd) King
 
 isChecked :: Game -> Color -> Bool
 isChecked game@Game{..} col =
-  let kingPos = head [pos | (pos, Occ (Piece (c, King))) <- assocs board, c == col]
-      oppPiecesPos = [pos | (pos, Occ (Piece (c, _))) <- assocs board, c /= col]
-  in any (\x -> isValidMovement game x kingPos (unwrapType (board ! x))) oppPiecesPos
+  let oppPiecesPos = [pos | (pos, Occ (Piece (c, _))) <- assocs board, c /= col]
+  in any attackCheck oppPiecesPos
   where
+    kingPos = head [pos | (pos, Occ (Piece (c, King))) <- assocs board, c == col]
+    lastRank = case cycleCol turn of
+                 White -> 7
+                 Black -> 0
     unwrapType sq =
       case getType sq of
         Nothing -> error "Used getype on empty square!"
         Just x -> x
+    attackCheck x =
+      let ty = unwrapType (board ! x)
+          prom = case ty == Pawn && (snd kingPos) == lastRank of
+                   True -> Just Queen -- We don't actually care about the type of promotion
+                   False -> Nothing
+        in isValidMovement game x kingPos prom ty
 
 isCheckMated :: Game -> Color -> Bool
 isCheckMated game@Game{..} col
   | isChecked game col =
-    let moves = [(src, dst) | src <- indices board, dst <- indices board]
+    let moves = [(src, dst, prom) | src <- indices board, dst <- indices board, prom <- [Nothing, Just Queen]]
     in
     case filter (isValid game) moves of
       [] -> True
@@ -235,7 +268,7 @@ startBoard =
       ]
 
 playMove :: Board -> Move -> Board
-playMove board move@(src, dst)
+playMove board move@(src, dst, prom)
   | not $ inBounds' src = error "Source coordinate of move is out of bounds!"
   | not $ inBounds' dst = error "Destination coordinate of move is out of bounds! "
   | isEnPassant board move = board // [(src, Empty), (dst, newS), ((xd, ys), Empty)]
@@ -244,12 +277,16 @@ playMove board move@(src, dst)
                               rookPosS = (if signX < 0 then 0 else 7, row)
                               rookPosD = (xd - signX, row)
                              in board // [(src, Empty), (dst, newS), (rookPosS, Empty), (rookPosD, board ! rookPosS)]
-
-  | otherwise = board // [(src, Empty), (dst, newS)]
+  | otherwise = case prom of
+                  Nothing -> board // [(src, Empty), (dst, newS)]
+                  Just pieceType -> board // [(src, Empty), (dst, Occ $ Piece (newSCol, pieceType))]
   where
     inBounds' = (flip inBounds) (snd $ bounds board)
     newS = board ! src
-    ((xs, ys), (xd, yd)) = move
+    ((xs, ys), (xd, yd), prom) = move
+    newSCol = case board ! src of
+                Empty -> error "shouldn't happen"
+                Occ (Piece (col, _)) -> col
 
 showBoard :: Board -> String
 showBoard board =
