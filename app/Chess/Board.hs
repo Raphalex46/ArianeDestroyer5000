@@ -1,5 +1,19 @@
-module Chess.Board (startingBoard, showBoard) where
+module Chess.Board
+  ( startingBoard,
+    showBoard,
+    Board,
+    Square (..),
+    isCol,
+    isInBounds,
+    getRow,
+    getCol,
+    DiagType (..),
+    getDiag,
+    module Data.Array,
+  )
+where
 
+import Chess.Colors
 import Chess.Coord
 import Chess.Pieces
 import Data.Array
@@ -16,6 +30,12 @@ parseSquare c = parsePiece c >>= Just . Occ
 showSquare :: Square -> String
 showSquare Empty = " "
 showSquare (Occ p) = showPiece p
+
+-- Some predicates on squares
+
+isCol :: Square -> Color -> Bool
+isCol Empty _ = False
+isCol (Occ (Piece (pCol, _))) col = col == pCol
 
 type Board = Array Coord Square
 
@@ -44,6 +64,33 @@ isInBounds board (row, col) =
   lowerRow <= row && row <= upperRow && lowerCol <= col && col <= upperCol
   where
     ((lowerRow, lowerCol), (upperRow, upperCol)) = bounds board
+
+getRow :: Board -> Int -> [(Coord, Square)]
+getRow board row = filter ((== row) . fst . fst) $ assocs board
+
+getCol :: Board -> Int -> [(Coord, Square)]
+getCol board col = filter ((== col) . snd . fst) $ assocs board
+
+-- | Enum for diagonal directions.
+data DiagType
+  = -- | For diagonals like '/'
+    Slash
+  | -- | For diagonals like '\'
+    Backslash
+  | -- | For both types of diagonals
+    Both
+
+getDiag :: Board -> Coord -> DiagType -> [(Coord, Square)]
+getDiag board coord@(row, col) diagTy =
+  case diagTy of
+    Both -> filter (isDistEqual coord . fst) $ assocs board
+    Slash -> filter ((\target -> isSignEqual coord target && isDistEqual coord target) . fst) $ assocs board
+    Backslash -> filter (not . (\target -> isSignEqual coord target && isDistEqual coord target) . fst) $ assocs board
+  where
+    isDistEqual (sRow, sCol) (tRow, tCol) =
+      abs (tCol - sCol) == abs (tRow - sRow)
+    isSignEqual (sRow, sCol) (tRow, tCol) =
+      signum (tCol - sCol) == signum (tRow - sRow)
 
 movePiece :: Board -> Coord -> Coord -> Either String Board
 movePiece board src dst

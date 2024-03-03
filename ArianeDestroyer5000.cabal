@@ -23,6 +23,7 @@ executable ArianeDestroyer5000
                       Chess.Coord
                       Chess.Board
                       Chess.Moves
+                      Chess.GameAnalysis
                       IO.MoveExpression
                       IO.Modes
     -- other-extensions:
