@@ -1,4 +1,4 @@
-module Chess.Pieces (PieceType (..), Piece (Piece), parsePiece, showPiece) where
+module Chess.Pieces (PieceType (..), Piece (Piece), parsePiece, showPiece, parsePieceType) where
 
 import Chess.Colors
 import Data.Char

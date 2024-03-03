@@ -22,6 +22,9 @@ executable ArianeDestroyer5000
                       Chess.Pieces
                       Chess.Coord
                       Chess.Board
+                      Chess.Moves
+                      IO.MoveExpression
+                      IO.Modes
     -- other-extensions:
     build-depends:    base ^>=4.19.0.0,
                       array

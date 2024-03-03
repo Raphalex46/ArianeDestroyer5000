@@ -1,4 +1,4 @@
-module Chess.Coord (Coord) where
+module Chess.Coord (Coord, parseCoord) where
 
 import Data.Char
 import Data.List
@@ -23,6 +23,6 @@ parseCoord [c, r] =
     row <- readMaybe [r]
     -- Similar error handling for columns is taken care of in 'letToCol'
     if 1 <= row && row <= 8
-      then Just (col, row - 1)
+      then Just (row - 1, col)
       else Nothing
 parseCoord _ = Nothing

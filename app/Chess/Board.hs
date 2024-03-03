@@ -38,3 +38,16 @@ showBoard board =
     showRow row =
       let rowSquares = [board ! (row, i) | i <- [0 .. 7]]
        in (show $ row + 1) ++ (concat $ map (\x -> "| " ++ showSquare x ++ " ") rowSquares) ++ "|" ++ (show $ row + 1)
+
+isInBounds :: Board -> Coord -> Bool
+isInBounds board (row, col) =
+  lowerRow <= row && row <= upperRow && lowerCol <= col && col <= upperCol
+  where
+    ((lowerRow, lowerCol), (upperRow, upperCol)) = bounds board
+
+movePiece :: Board -> Coord -> Coord -> Either String Board
+movePiece board src dst
+  | not $ (isInBounds board src) && (isInBounds board dst) = Left "Coordinates are out of bounds"
+  | otherwise = case board ! src of
+      Empty -> Left "The source square is empty"
+      sq@(Occ _) -> Right $ board // [(src, Empty), (dst, sq)]
