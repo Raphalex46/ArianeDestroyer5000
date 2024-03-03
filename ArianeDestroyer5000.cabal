@@ -18,7 +18,10 @@ common warnings
 executable ArianeDestroyer5000
     import:           warnings
     main-is:          Main.hs
-    other-modules:    Chess
+    other-modules:    Chess.Colors
+                      Chess.Pieces
+                      Chess.Coord
+                      Chess.Board
     -- other-extensions:
     build-depends:    base ^>=4.19.0.0,
                       array
