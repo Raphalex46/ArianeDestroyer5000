@@ -1,14 +1,17 @@
 module Chess.Board
   ( startingBoard,
-    showBoard,
     Board,
     Square (..),
+    showSquare,
     isCol,
+    isEmpty,
     isInBounds,
-    getRow,
-    getCol,
-    DiagType (..),
-    getDiag,
+    Dir (..),
+    getPartRow,
+    getPartCol,
+    DiagDir (..),
+    getPartDiag,
+    movePiece,
     module Data.Array,
   )
 where
@@ -37,6 +40,10 @@ isCol :: Square -> Color -> Bool
 isCol Empty _ = False
 isCol (Occ (Piece (pCol, _))) col = col == pCol
 
+isEmpty :: Square -> Bool
+isEmpty Empty = True
+isEmpty _ = False
+
 type Board = Array Coord Square
 
 startingBoard :: Board
@@ -48,49 +55,51 @@ startingBoard =
     blackPawns = "pppppppp"
     emptyLines = replicate (8 * 4) ' '
 
-showBoard :: Board -> String
-showBoard board =
-  unlines $ [columnNames, separator] ++ (intersperse (separator) $ map showRow [7, 6 .. 0]) ++ [separator, columnNames]
-  where
-    hspace = " "
-    columnNames = hspace ++ (concat $ map (\x -> "  " ++ [x] ++ " ") ['A' .. 'H'])
-    separator = hspace ++ (take 32 $ cycle "+---") ++ "+"
-    showRow row =
-      let rowSquares = [board ! (row, i) | i <- [0 .. 7]]
-       in (show $ row + 1) ++ (concat $ map (\x -> "| " ++ showSquare x ++ " ") rowSquares) ++ "|" ++ (show $ row + 1)
-
 isInBounds :: Board -> Coord -> Bool
 isInBounds board (row, col) =
   lowerRow <= row && row <= upperRow && lowerCol <= col && col <= upperCol
   where
     ((lowerRow, lowerCol), (upperRow, upperCol)) = bounds board
 
-getRow :: Board -> Int -> [(Coord, Square)]
-getRow board row = filter ((== row) . fst . fst) $ assocs board
+data Dir
+  = Pos
+  | Neg
 
-getCol :: Board -> Int -> [(Coord, Square)]
-getCol board col = filter ((== col) . snd . fst) $ assocs board
+getPartRow :: Board -> Dir -> Coord -> [(Coord, Square)]
+getPartRow board dir (sRow, sCol) =
+  [((sRow, col), board ! (sRow, col)) | col <- [sCol + sign, sCol + sign * 2 .. bound]]
+  where
+    ((_, lowerCol), (_, upperCol)) = bounds board
+    (bound, sign) = case dir of
+      Pos -> (upperCol, 1)
+      Neg -> (lowerCol, -1)
+
+getPartCol :: Board -> Dir -> Coord -> [(Coord, Square)]
+getPartCol board dir (sRow, sCol) =
+  [((row, sCol), board ! (row, sCol)) | row <- [sRow + sign, sRow + sign * 2 .. bound]]
+  where
+    ((lowerRow, _), (upperRow, _)) = bounds board
+    (bound, sign) = case dir of
+      Pos -> (upperRow, 1)
+      Neg -> (lowerRow, -1)
 
 -- | Enum for diagonal directions.
-data DiagType
-  = -- | For diagonals like '/'
-    Slash
-  | -- | For diagonals like '\'
-    Backslash
-  | -- | For both types of diagonals
-    Both
+data DiagDir
+  = NE
+  | NW
+  | SW
+  | SE
 
-getDiag :: Board -> Coord -> DiagType -> [(Coord, Square)]
-getDiag board coord@(row, col) diagTy =
-  case diagTy of
-    Both -> filter (isDistEqual coord . fst) $ assocs board
-    Slash -> filter ((\target -> isSignEqual coord target && isDistEqual coord target) . fst) $ assocs board
-    Backslash -> filter (not . (\target -> isSignEqual coord target && isDistEqual coord target) . fst) $ assocs board
+getPartDiag :: Board -> DiagDir -> Coord -> [(Coord, Square)]
+getPartDiag board dir (sRow, sCol) =
+  map (\x -> (x, board ! x)) $
+    takeWhile (isInBounds board) [(sRow + y, sCol + x) | (y, x) <- zip [signY, signY * 2 ..] [signX, signX * 2 ..]]
   where
-    isDistEqual (sRow, sCol) (tRow, tCol) =
-      abs (tCol - sCol) == abs (tRow - sRow)
-    isSignEqual (sRow, sCol) (tRow, tCol) =
-      signum (tCol - sCol) == signum (tRow - sRow)
+    (signY, signX) = case dir of
+      NE -> (1, 1)
+      NW -> (1, -1)
+      SW -> (-1, -1)
+      SE -> (-1, 1)
 
 movePiece :: Board -> Coord -> Coord -> Either String Board
 movePiece board src dst

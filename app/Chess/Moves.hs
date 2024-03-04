@@ -1,6 +1,5 @@
 module Chess.Moves (Move (..), Side (..)) where
 
-import Chess.Colors
 import Chess.Coord
 import Chess.Pieces
 

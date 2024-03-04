@@ -13,7 +13,7 @@ colToLet i
 
 letToCol :: Char -> Maybe Int
 letToCol c
-  | toUpper c `elem` ['A' .. 'H'] = Just $ ord c - ord 'A'
+  | toUpper c `elem` ['A' .. 'H'] = Just $ ord (toUpper c) - ord 'A'
   | otherwise = Nothing
 
 parseCoord :: String -> Maybe Coord
