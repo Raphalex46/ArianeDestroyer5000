@@ -1,12 +1,17 @@
+-- | Command loop for the 'Standard' mode.
 module IO.Standard.Loop where
 
 import Chess.Board
 import IO.Standard.Command
 import System.IO
 
+-- | The prompt.
 prompt :: String
 prompt = "> "
 
+-- | Loop while asking the user for input commands.
+--
+-- Start with a given starting 'Board'
 loop :: Board -> IO ()
 loop board =
   do

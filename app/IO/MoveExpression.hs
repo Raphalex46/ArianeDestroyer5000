@@ -1,3 +1,4 @@
+-- | A module for the way the user inputs moves
 module IO.MoveExpression where
 
 import Chess.Coord
@@ -8,18 +9,21 @@ import IO.Modes
 -- | Move expressions are a data type representing a move that is not
 -- necessarily completely defined yet. For example, if the player inputs 'nf6',
 -- it means move a knight to f6, but the source coordinate of the knight cannot
--- be determined yet. The move is later on translated to a move standard move
+-- be determined yet. The move is later on translated to a move standard move.
 data MoveExpression
-  = -- | A complete, totally determined move
+  = -- | A complete, totally determined move.
     ConcreteMove !Move
   | -- | A move expressed with a piece and a
-    -- destination position
+    -- destination position.
     PieceTypeMove !PieceType !Coord
 
--- Just a function to avoid to much repetition
+-- Just a function to avoid to much repetition.
 castle :: Side -> Maybe MoveExpression
 castle = Just . ConcreteMove . Castle
 
+-- | Converts a 'String' to a 'MoveExpression'.
+--
+-- Returns 'Nothing' if the input is invalid.
 parseMoveExpression :: String -> Maybe MoveExpression
 parseMoveExpression [srcCol, srcRow, dstCol, dstRow] =
   do
@@ -43,6 +47,7 @@ parseMoveExpression dstStr@[_, _] =
     Just $ PieceTypeMove Pawn dst
 parseMoveExpression _ = Nothing
 
+-- | Read a move expression from stdin.
 readMoveExpression :: Mode -> IO MoveExpression
 readMoveExpression Standard =
   do

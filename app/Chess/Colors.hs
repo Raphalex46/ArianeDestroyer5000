@@ -1,8 +1,10 @@
+-- | Small module defining the colors of the teams in chess (black and white).
 module Chess.Colors (Color (White, Black), opp) where
 
+-- | Color data type
 data Color = White | Black deriving (Eq, Show)
 
--- | Given a color, returns the opposite color (Black -> White and White -> Black)
+-- | Given a color, returns the opposite color (Black -> White and White -> Black).
 opp :: Color -> Color
 opp Black = White
 opp White = Black
