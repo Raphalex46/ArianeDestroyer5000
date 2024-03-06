@@ -24,6 +24,8 @@ executable ArianeDestroyer5000
                       Chess.Board
                       Chess.Moves
                       Chess.GameAnalysis
+                      Chess.GameState
+                      Chess.Rules
                       IO.Board
                       IO.MoveExpression
                       IO.Modes
