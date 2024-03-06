@@ -14,7 +14,7 @@ import Chess.Colors
 import Data.Char
 
 -- | Enum for the types of pieces.
-data PieceType = Pawn | Rook | Knight | Bishop | Queen | King deriving (Enum)
+data PieceType = Pawn | Rook | Knight | Bishop | Queen | King deriving (Enum, Eq)
 
 -- | Returns the character representing the given 'PieceType'.
 getTypeChar :: PieceType -> Char

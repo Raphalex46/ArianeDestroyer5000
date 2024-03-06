@@ -1,5 +1,5 @@
 -- | A module for the way the user inputs moves
-module IO.MoveExpression where
+module IO.MoveExpression (parseMoveExpression, MoveExpression, DecodeError, decodeMoveExpression) where
 
 import Chess.Coord
 import Chess.Moves
@@ -16,6 +16,8 @@ data MoveExpression
   | -- | A move expressed with a piece and a
     -- destination position.
     PieceTypeMove !PieceType !Coord
+
+data DecodeError = DecodeError deriving(Show)
 
 -- Just a function to avoid to much repetition.
 castle :: Side -> Maybe MoveExpression
@@ -58,3 +60,7 @@ readMoveExpression Standard =
         readMoveExpression Standard
       Just moveExpr -> return moveExpr
 readMoveExpression UCI = error "Not yet implemented"
+
+decodeMoveExpression :: MoveExpression -> Either DecodeError Move
+decodeMoveExpression (ConcreteMove move) = Right move
+decodeMoveExpression (PieceTypeMove _ _) = Left DecodeError

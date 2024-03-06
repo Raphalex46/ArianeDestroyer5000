@@ -6,10 +6,45 @@ import Chess.Colors
 import Chess.Coord
 import Chess.Pieces
 
--- | Small funciton that acts like 'takeWhile' but adds the first element that doesn't respect the predicate.
+-- | Small function that acts like 'takeWhile' but adds the first element that doesn't respect the predicate.
 takeWhileInclusive :: (a -> Bool) -> [a] -> [a]
 takeWhileInclusive _ [] = []
 takeWhileInclusive pre (x : xs) = if pre x then x : takeWhileInclusive pre xs else [x]
+
+-- | Returns the list of `Coord` the piece at the given `Coord` can move to.
+movableSquares :: Board -> Coord -> [Coord]
+movableSquares board coord =
+  case board ! coord of
+    Empty -> []
+    Occ p -> movableSquaresWithPiece board coord p
+
+-- | Returns the list of squares where a given `Piece` can move from the given
+-- `Coord`.
+movableSquaresWithPiece :: Board -> Coord -> Piece -> [Coord]
+movableSquaresWithPiece board coord@(row, _) piece@(Piece (color, ty)) =
+  case ty of
+    Pawn ->
+      -- Chose direction from the color
+      let direction = case color of
+            White -> Pos
+            Black -> Neg
+          -- A pawn at the starting rank can move 2 ranks
+          possibleLength =
+            if row == pawnStartingRank color
+              then 2
+              else 1
+       in ( map fst . takeWhileInclusive (isEmpty . snd) . take possibleLength $
+              getPartCol board direction coord
+          )
+            ++ ( filter
+                   ( ((flip isCol) $ opp color)
+                       . (board !)
+                   )
+                   $ attackedSquaresWithPiece board coord piece
+               )
+    -- For any other piece, the movable squares are the same as the attack
+    -- squares, except for squares with allied pieces
+    _ -> filter (not . ((flip isCol) color) . (board !)) $ attackedSquaresWithPiece board coord piece
 
 -- | This function calls 'attackedSquaresWithPiece' with the piece at the given 'Coord'.
 attackedSquares :: Board -> Coord -> [Coord]

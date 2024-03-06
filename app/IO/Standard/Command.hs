@@ -13,6 +13,7 @@ import Chess.Rules
 import Data.Char
 import Data.List
 import IO.Board
+import IO.MoveExpression
 import qualified System.Console.ANSI as ANSI
 
 -- | All possible commands in standard mode.
@@ -21,6 +22,8 @@ data Command
     Show ShowCommand
   | -- | Move a piece from one position to another.
     MovePiece Coord Coord
+  |
+    Play MoveExpression
 
 -- | All possible show commands
 data ShowCommand
@@ -49,7 +52,7 @@ data ParserError
   deriving (Show)
 
 -- | Errors that can occur when executing a command.
-data ExecutionError = InvalidSquare
+data ExecutionError = InvalidSquare | MoveExpressionError DecodeError | GameError
   deriving
     ( -- | The given square is invalid.
       Show
@@ -72,6 +75,7 @@ parseCommand input =
     (str : strs)
       | str `isPrefixOf` "show" -> parseShowCommand strs
       | str `isPrefixOf` "move" -> parseMoveCommand strs
+      | str `isPrefixOf` "play" -> parsePlayCommand strs
       | otherwise -> Left InvalidCommand
     [] -> Left NoCommand
 
@@ -111,6 +115,11 @@ parseMoveCommand [[c1, r1, c2, r2]] =
 parseMoveCommand (_ : _) = Left ExtraCharacters
 parseMoveCommand [] = Left MissingArgument
 
+parsePlayCommand :: [String] -> Either ParserError Command
+parsePlayCommand [str] = maybe (Left InvalidArgument) (Right . Play) $ parseMoveExpression str
+parsePlayCommand (_:_) = Left ExtraCharacters
+parsePlayCommand [] = Left MissingArgument
+
 -- | Execute the given 'Command' with the given 'Board'.
 --
 -- Returns an 'ExecutionError' if an error occurs.
@@ -130,6 +139,13 @@ executeCommand board command =
           putStrLn $ showBoard newBoard
           return newBoard
         Left _ -> Left $ InvalidSquare
+    (Play moveExpr) ->
+          case decodeMoveExpression moveExpr of
+            Left err -> Left $ MoveExpressionError err
+            Right move -> case playMove GameState{board=board} move of
+              Right GameState {board=b} -> Right $ return $ b
+              Left _ -> Left GameError
+        
   where
     -- Little function to color the given squares according to the color of
     -- the piece on them.
