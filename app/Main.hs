@@ -1,7 +1,12 @@
 module Main where
 
-import Chess.Board
+import Chess.GameState
+import IO.Board
 import IO.Standard.Loop
 
 main :: IO ()
-main = loop startingBoard
+main =
+  let s = startingState
+  in do
+    putStrLn $ showBoard (board s)
+    loop startingState

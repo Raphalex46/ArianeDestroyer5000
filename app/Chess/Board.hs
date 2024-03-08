@@ -7,12 +7,14 @@ module Chess.Board
     -- | Utilities for the board.
     isInBounds,
     movePiece,
+    removePiece,
     -- | Starting board.
     startingBoard,
     showSquare,
     -- | Predicates on squares.
     isCol,
     isEmpty,
+    isPieceType,
     -- | Fetching rows and diagonals.
     Dir (..),
     getPartRow,
@@ -59,6 +61,11 @@ isCol (Occ (Piece (pCol, _))) col = col == pCol
 isEmpty :: Square -> Bool
 isEmpty Empty = True
 isEmpty _ = False
+
+-- | Tests if the `square` has a piece of the given `PieceType`.
+isPieceType :: Square -> PieceType -> Bool
+isPieceType Empty _ = False
+isPieceType (Occ (Piece (_, pTy))) ty = ty == pTy
 
 -- | Type alias for a board. A board is simply an array of squares.
 type Board = Array Coord Square
@@ -135,9 +142,14 @@ getPartDiag board dir (sRow, sCol) =
       SE -> (-1, 1)
 
 -- | Move a piece from one position to another. This doesn't check the rules.
+-- TODO: Remove the error checking and put a pre-condition. This code
+-- shouldn't be called with invalid coordinate values
 movePiece :: Board -> Coord -> Coord -> Either String Board
 movePiece board src dst
   | not $ (isInBounds board src) && (isInBounds board dst) = Left "Coordinates are out of bounds"
   | otherwise = case board ! src of
       Empty -> Left "The source square is empty"
       sq@(Occ _) -> Right $ board // [(src, Empty), (dst, sq)]
+
+removePiece :: Board -> Coord -> Board
+removePiece board coord = board // [(coord, Empty)]
