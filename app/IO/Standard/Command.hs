@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | This module contains parsing and execution of the 'Standard' mode
 -- commands.
@@ -23,8 +23,7 @@ data Command
     Show ShowCommand
   | -- | Move a piece from one position to another.
     MovePiece Coord Coord
-  |
-    Play MoveExpression
+  | Play MoveExpression
 
 -- | All possible show commands
 data ShowCommand
@@ -118,14 +117,14 @@ parseMoveCommand [] = Left MissingArgument
 
 parsePlayCommand :: [String] -> Either ParserError Command
 parsePlayCommand [str] = maybe (Left InvalidArgument) (Right . Play) $ parseMoveExpression str
-parsePlayCommand (_:_) = Left ExtraCharacters
+parsePlayCommand (_ : _) = Left ExtraCharacters
 parsePlayCommand [] = Left MissingArgument
 
 -- | Execute the given 'Command' with the given 'GameState'.
 --
 -- Returns an 'ExecutionError' if an error occurs.
 executeCommand :: GameState -> Command -> Either ExecutionError (IO GameState)
-executeCommand gameState@GameState{..} command =
+executeCommand gameState@GameState {..} command =
   case command of
     -- Simply show the board
     Show (ShowBoard) -> Right $ putStrLn (showBoard board) >> return gameState
@@ -133,20 +132,19 @@ executeCommand gameState@GameState{..} command =
     Show (ShowAttacks coord) ->
       Right $ printColoredSquaresOfInterest (attackedSquares board coord) coord >> return gameState
     Show (ShowValidMoves coord) ->
-      Right $ printColoredSquaresOfInterest (validSquaresFromCoord gameState coord) coord >> return gameState
+      Right $ printColoredSquaresOfInterest (map (getDstCoord board) (validMovesFromCoord gameState coord)) coord >> return gameState
     (MovePiece src dst) ->
       case movePiece board src dst of
         Right newBoard -> Right $ do
           putStrLn $ showBoard newBoard
-          return gameState{board=newBoard}
+          return gameState {board = newBoard}
         Left _ -> Left $ InvalidSquare
     (Play moveExpr) ->
-          case decodeMoveExpression moveExpr of
-            Left err -> Left $ MoveExpressionError err
-            Right move -> case playMove gameState move of
-              Right newGameState@GameState{board=b} -> Right $ putStrLn (showBoard b) >> return newGameState
-              Left _ -> Left GameError
-        
+      case decodeMoveExpression gameState moveExpr of
+        Left err -> Left $ MoveExpressionError err
+        Right move -> case playMove gameState move of
+          Right newGameState@GameState {board = b} -> Right $ putStrLn (showBoard b) >> return newGameState
+          Left _ -> Left GameError
   where
     -- Little function to color the given squares according to the color of
     -- the piece on them.

@@ -1,7 +1,10 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 -- | A module for the way the user inputs moves
 module IO.MoveExpression (parseMoveExpression, MoveExpression, DecodeError, decodeMoveExpression) where
 
 import Chess.Coord
+import Chess.GameState
 import Chess.Moves
 import Chess.Pieces
 import IO.Modes
@@ -16,12 +19,14 @@ data MoveExpression
   | -- | A move expressed with a piece and a
     -- destination position.
     PieceTypeMove !PieceType !Coord
+  | -- | Castling, same as the concrete castle move, except the color is missing
+    CastleMove !Side
 
-data DecodeError = DecodeError deriving(Show)
+data DecodeError = DecodeError deriving (Show)
 
 -- Just a function to avoid to much repetition.
 castle :: Side -> Maybe MoveExpression
-castle = Just . ConcreteMove . Castle
+castle = Just . CastleMove
 
 -- | Converts a 'String' to a 'MoveExpression'.
 --
@@ -61,6 +66,14 @@ readMoveExpression Standard =
       Just moveExpr -> return moveExpr
 readMoveExpression UCI = error "Not yet implemented"
 
-decodeMoveExpression :: MoveExpression -> Either DecodeError Move
-decodeMoveExpression (ConcreteMove move) = Right move
-decodeMoveExpression (PieceTypeMove _ _) = Left DecodeError
+-- | Given the current `GameState`, decode a `MoveExpression` to an actual
+-- `Move`, usable by the rest of the engine.
+--
+-- The `GameState` is needed to decode moves, for example, when given a
+-- castling move expression, we suppose the castle is for the king of the
+-- current turn.
+-- When typing a `PieceTypeMove`, we need to know where the moved piece is.
+decodeMoveExpression :: GameState -> MoveExpression -> Either DecodeError Move
+decodeMoveExpression _ (ConcreteMove move) = Right move
+decodeMoveExpression _ (PieceTypeMove _ _) = Left DecodeError
+decodeMoveExpression GameState {turn = turn} (CastleMove side) = Right $ Castle turn side

@@ -5,13 +5,14 @@
 module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove) where
 
 import Chess.Board
+import Chess.Colors
 import Chess.Coord
 import Chess.GameAnalysis
 import Chess.GameState
 import Chess.Moves
 import Chess.Pieces
 
-data GameError = GameError deriving(Show)
+data GameError = GameError deriving (Show)
 
 -- | Returns a list of coordinates representing valid squares the piece at
 -- the given `Coord` can move to
@@ -21,20 +22,26 @@ validSquaresFromCoord GameState {..} coord =
     Empty -> []
     Occ (Piece (col, ty)) ->
       let coords = filter (not . (flip isCol) col . (board !)) $ movableSquares board coord
-      in case ty of
-          Pawn ->
-            coords ++ maybe
-              [] -- If Nothing, then don't add any coord
-              (\(x, _) -> if x `elem` attackedSquares board coord then [x] else []) -- If the pawn attacks an enPassant possbility, add it
-              enPassantCoord
-          King -> coords -- Add Castle possibility
-          Rook -> coords -- Add Castle possibility
-          _ -> coords
+       in case ty of
+            Pawn ->
+              coords
+                ++ maybe
+                  [] -- If Nothing, then don't add any coord
+                  (\(x, _) -> if x `elem` attackedSquares board coord then [x] else []) -- If the pawn attacks an enPassant possbility, add it
+                  enPassantCoord
+            _ -> coords
 
 -- | Returns a list of possible move that can be legally done with the piece
 -- at the given `Coord`
 validMovesFromCoord :: GameState -> Coord -> [Move]
-validMovesFromCoord game coord = map (MovePiece coord) $ validSquaresFromCoord game coord
+validMovesFromCoord gameState@GameState {..} coord =
+  case board ! coord of
+    Empty -> []
+    Occ (Piece (col, ty)) ->
+      let coords = map (MovePiece coord) $ validSquaresFromCoord gameState coord
+       in case ty of
+            King -> coords ++ map (Castle col) (filter (isCastlePossible board col) $ castlingRights col)
+            _ -> coords
 
 -- Various predicates on moves
 
@@ -46,25 +53,27 @@ isMovePawnTwoRanks _ _ = False
 
 -- | The move is an en passant move
 isEnPassant :: GameState -> Move -> Bool
-isEnPassant GameState{..} (MovePiece src dst) =
+isEnPassant GameState {..} (MovePiece src dst) =
   case enPassantCoord of
     Just (target, _)
-        | isPieceType (board ! src) Pawn -> dst == target
-        | otherwise -> False
+      | isPieceType (board ! src) Pawn -> dst == target
+      | otherwise -> False
     Nothing -> False
 isEnPassant _ _ = False
 
 -- | Given a `Move`, get the possible en passant `Coord` and current position
 -- of the moved pawn if there is an en passant possiblity
 getEnPassantCoord :: Board -> Move -> Maybe (Coord, Coord)
-getEnPassantCoord board move@(MovePiece (sRow, sCol)  (tRow, tCol)) =
-  if isMovePawnTwoRanks board move then
-    let dir = signum (tRow - sRow) in Just ((sRow + dir, sCol), (tRow, tCol))
-  else Nothing
+getEnPassantCoord board move@(MovePiece (sRow, sCol) (tRow, tCol)) =
+  if isMovePawnTwoRanks board move
+    then let dir = signum (tRow - sRow) in Just ((sRow + dir, sCol), (tRow, tCol))
+    else Nothing
 getEnPassantCoord _ _ = Nothing
 
 -- | Apply a move to the board (move / remove / add pieces accordingly)
+-- Note: this function does not check the rules
 applyMove :: GameState -> Move -> Either GameError Board
+-- Handle normal piece moves
 applyMove gameState@GameState {..} move@(MovePiece src dst) =
   case enPassantCoord of
     Nothing -> execMove
@@ -75,14 +84,58 @@ applyMove gameState@GameState {..} move@(MovePiece src dst) =
     execMove = case movePiece board src dst of
       Left _ -> Left GameError
       Right board -> Right board
-applyMove _ _ = error "Not yet implemented"
+-- Handle castling
+applyMove GameState {..} (Castle color side) =
+  let kingPos@(kingRow, kingCol) = getKingCoord board turn
+      rookPos = castleRookPos board turn side
+      direction = case side of
+        QueenSide -> -1
+        KingSide -> 1
+      newKingCol = kingCol + direction * 2
+   in either (\_ -> Left GameError) Right $ do
+        moveKingBoard <- movePiece board kingPos (kingRow, newKingCol)
+        moveRookBoard <- movePiece moveKingBoard rookPos (kingRow, newKingCol - direction)
+        return moveRookBoard
 
+-- | Returns an updated `CastlingRights` function given the `GameState` and an
+-- applied `Move`.
+--
+-- Following the standard rules of chess, moving the king or castling removes
+-- all castling rights for the corresponding color. Moving a rook removes
+-- castling rights for the color on the side of the moved rook.
+updateCastlingRights :: GameState -> Move -> CastlingRights
+updateCastlingRights GameState {..} move =
+  case move of
+    Castle col _ -> setRights col []
+    MovePiece src _ -> case (board ! src) of
+      Empty -> castlingRights
+      Occ (Piece (col, ty)) -> case ty of
+        King -> setRights col []
+        Rook -> case getRookSide src of
+          QueenSide -> setRights col [KingSide]
+          KingSide -> setRights col [QueenSide]
+        _ -> castlingRights
+    _ -> castlingRights
+  where
+    setRights col sides c = if c == col then sides else castlingRights c
 
 -- | Play a move, updating the 'GameState' accordingly
 playMove :: GameState -> Move -> Either GameError GameState
-playMove gameState@GameState {..} move@(MovePiece src _)
-  | move `elem` (validMovesFromCoord gameState src) = case applyMove gameState move of
-    Right b -> Right GameState{board=b, enPassantCoord=getEnPassantCoord board move}
-    Left _ -> Left GameError
-  | otherwise = Left GameError
-playMove _ _ = error "This kind of move is not yet implemented"
+playMove gameState@GameState {..} move =
+  case isCol (board ! src) turn of
+    True
+      | move `elem` (validMovesFromCoord gameState src) ->
+          case applyMove gameState move of
+            Right b ->
+              Right gameState
+                {
+                  board = b,
+                  enPassantCoord = getEnPassantCoord board move,
+                  turn = opp turn,
+                  castlingRights = updateCastlingRights gameState move
+                }
+            Left _ -> Left GameError
+      | otherwise -> Left GameError
+    False -> Left GameError
+  where
+    src = getSrcCoord board move

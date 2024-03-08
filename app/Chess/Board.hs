@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 -- | This module contains the definitions for squares and the board, with
 -- basic operations on the board and predicates on squares.
 module Chess.Board
@@ -5,6 +6,7 @@ module Chess.Board
     Square (..),
     Board,
     -- | Utilities for the board.
+    upperRow,
     isInBounds,
     movePiece,
     removePiece,
@@ -21,6 +23,9 @@ module Chess.Board
     getPartCol,
     DiagDir (..),
     getPartDiag,
+    -- | Fetching piece positions
+    getKingCoord,
+    getSquaresOfCol,
     -- | Reexported module for more advanced board manipulations.
     module Data.Array,
   )
@@ -30,6 +35,7 @@ import Chess.Colors
 import Chess.Coord
 import Chess.Pieces
 import Data.Array
+import Data.List
 import Data.Maybe
 
 -- | Square datatype.
@@ -80,6 +86,10 @@ startingBoard =
     whitePawns = "PPPPPPPP"
     blackPawns = "pppppppp"
     emptyLines = replicate (8 * 4) ' '
+
+-- | Returns the maximum row on the board
+upperRow :: Board -> Int
+upperRow = fst . snd . bounds
 
 -- | Tests whether or not the given 'Coord' is in the bounds of the given 'Board'.
 isInBounds :: Board -> Coord -> Bool
@@ -141,6 +151,18 @@ getPartDiag board dir (sRow, sCol) =
       SW -> (-1, -1)
       SE -> (-1, 1)
 
+-- | Get the coordinates of the king of the given color.
+getKingCoord :: Board -> Color -> Coord
+getKingCoord board color =
+  case find ((\x -> (isPieceType x King) && (isCol x color)) . snd) $ assocs board of
+    Nothing -> error "This board is missing a king!"
+    Just c -> fst c
+
+-- | Get the list of (`Coord`, `Square`) pairs of squares containing piece of 
+-- the given `Color`.
+getSquaresOfCol :: Board -> Color -> [(Coord, Square)]
+getSquaresOfCol board color = filter (((flip isCol) color) . snd) $ assocs board
+
 -- | Move a piece from one position to another. This doesn't check the rules.
 -- TODO: Remove the error checking and put a pre-condition. This code
 -- shouldn't be called with invalid coordinate values
@@ -151,5 +173,6 @@ movePiece board src dst
       Empty -> Left "The source square is empty"
       sq@(Occ _) -> Right $ board // [(src, Empty), (dst, sq)]
 
+-- | Remove piece at the given `Coord` from the board
 removePiece :: Board -> Coord -> Board
 removePiece board coord = board // [(coord, Empty)]
