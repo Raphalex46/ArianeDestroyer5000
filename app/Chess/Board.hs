@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 -- | This module contains the definitions for squares and the board, with
 -- basic operations on the board and predicates on squares.
 module Chess.Board
@@ -158,7 +159,7 @@ getKingCoord board color =
     Nothing -> error "This board is missing a king!"
     Just c -> fst c
 
--- | Get the list of (`Coord`, `Square`) pairs of squares containing piece of 
+-- | Get the list of (`Coord`, `Square`) pairs of squares containing piece of
 -- the given `Color`.
 getSquaresOfCol :: Board -> Color -> [(Coord, Square)]
 getSquaresOfCol board color = filter (((flip isCol) color) . snd) $ assocs board

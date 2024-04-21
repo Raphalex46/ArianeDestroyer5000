@@ -39,9 +39,19 @@ validMovesFromCoord gameState@GameState {..} coord =
     Empty -> []
     Occ (Piece (col, ty)) ->
       let coords = map (MovePiece coord) $ validSquaresFromCoord gameState coord
-       in case ty of
+          candidateMoves = case ty of
             King -> coords ++ map (Castle col) (filter (isCastlePossible board col) $ castlingRights col)
             _ -> coords
+       in filter (not . moveResultsInCheck) candidateMoves
+  where
+    moveResultsInCheck move =
+      let tempBoard = applyMove gameState move
+       in case tempBoard of
+            Right newBoard -> isKingInCheck newBoard turn
+            -- Just consider errors from the `applyMove` function as resulting
+            -- in a check (we don't want to include such moves in the final
+            -- result)
+            Left _ -> True
 
 -- Various predicates on moves
 
@@ -121,21 +131,21 @@ updateCastlingRights GameState {..} move =
 
 -- | Play a move, updating the 'GameState' accordingly
 playMove :: GameState -> Move -> Either GameError GameState
-playMove gameState@GameState {..} move =
-  case isCol (board ! src) turn of
-    True
-      | move `elem` (validMovesFromCoord gameState src) ->
+playMove gameState@GameState {..} move
+  | isCol (board ! src) turn = playMoveCorrectColor
+  | otherwise = Left GameError
+  where
+    playMoveCorrectColor
+      | move `elem` (validMovesFromCoord gameState src) =
           case applyMove gameState move of
             Right b ->
-              Right gameState
-                {
-                  board = b,
-                  enPassantCoord = getEnPassantCoord board move,
-                  turn = opp turn,
-                  castlingRights = updateCastlingRights gameState move
-                }
+              Right
+                gameState
+                  { board = b,
+                    enPassantCoord = getEnPassantCoord board move,
+                    turn = opp turn,
+                    castlingRights = updateCastlingRights gameState move
+                  }
             Left _ -> Left GameError
-      | otherwise -> Left GameError
-    False -> Left GameError
-  where
+      | otherwise = Left GameError
     src = getSrcCoord board move

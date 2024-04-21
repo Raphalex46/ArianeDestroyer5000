@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 -- | Various functions to get information about the board.
-module Chess.GameAnalysis (movableSquares, attackedSquares, castleRookPos, isCastlePossible, getSrcCoord, getDstCoord, getRookSide) where
+module Chess.GameAnalysis (movableSquares, attackedSquares, castleRookPos, isCastlePossible, getSrcCoord, getDstCoord, getRookSide, isKingInCheck) where
 
 import Chess.Board
 import Chess.Colors
@@ -51,6 +52,12 @@ isCastlePossible board color side =
       attackedSquares = attackedSquaresByColor board (opp color)
    in all (isEmpty . (board !)) [(rowSrc, col) | col <- [lowerCoord .. upperCoord]]
         && all (\coord -> not $ coord `elem` attackedSquares) [(rowSrc, col) | col <- [lowerCoord .. upperCoord]]
+
+-- | Returns whether or not the king of the given `Color` is in check.
+isKingInCheck :: Board -> Color -> Bool
+isKingInCheck board color =
+  let kingPos = getKingCoord board color
+   in kingPos `elem` (attackedSquaresByColor board (opp color))
 
 -- | Returns the coordinates of the moving rook when castling the king of a
 -- given `Color` to the given `Side`.
