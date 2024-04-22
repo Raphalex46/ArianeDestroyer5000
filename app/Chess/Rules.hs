@@ -4,6 +4,8 @@
 -- | Functions for the rules of chess
 module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove) where
 
+import Data.List
+
 import Chess.Board
 import Chess.Colors
 import Chess.Coord
@@ -116,18 +118,21 @@ applyMove GameState {..} (Castle color side) =
 updateCastlingRights :: GameState -> Move -> CastlingRights
 updateCastlingRights GameState {..} move =
   case move of
-    Castle col _ -> setRights col []
+    Castle col _ -> removeRights col [QueenSide, KingSide]
     MovePiece src _ -> case (board ! src) of
       Empty -> castlingRights
       Occ (Piece (col, ty)) -> case ty of
-        King -> setRights col []
-        Rook -> case getRookSide src of
-          QueenSide -> setRights col [KingSide]
-          KingSide -> setRights col [QueenSide]
+        King -> removeRights col [QueenSide, KingSide]
+        Rook -> removeRights col [(getRookSide src)]
         _ -> castlingRights
     _ -> castlingRights
   where
-    setRights col sides c = if c == col then sides else castlingRights c
+    removeRights col sides c =
+      if c == col then
+        (castlingRights c) \\ sides
+      else
+        castlingRights c
+      
 
 -- | Play a move, updating the 'GameState' accordingly
 playMove :: GameState -> Move -> Either GameError GameState
