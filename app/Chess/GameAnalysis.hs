@@ -109,7 +109,7 @@ movableSquaresWithPiece board coord@(row, _) piece@(Piece (color, ty)) =
             if row == pawnStartingRank color
               then 2
               else 1
-       in ( map fst . takeWhileInclusive (isEmpty . snd) . take possibleLength $
+       in ( map fst . takeWhile (isEmpty . snd) . take possibleLength $
               getPartCol board direction coord
           )
             ++ ( filter
