@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Functions for the rules of chess
-module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove) where
+module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate) where
 
 import Data.List
 
@@ -54,6 +54,12 @@ validMovesFromCoord gameState@GameState {..} coord =
             -- in a check (we don't want to include such moves in the final
             -- result)
             Left _ -> True
+
+-- Checks whether the king of the given `Color` is in checkmate or not
+isKingInCheckmate :: GameState -> Color -> Bool
+isKingInCheckmate gameState@GameState {..} color =
+  let allyPiecesCoord = getSquaresOfCol board color
+  in (isKingInCheck board color) && (all null $ map (validMovesFromCoord gameState . fst) allyPiecesCoord)
 
 -- Various predicates on moves
 

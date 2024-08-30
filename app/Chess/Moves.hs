@@ -6,7 +6,7 @@ import Chess.Coord
 import Chess.Pieces
 
 -- | Sides for castling.
-data Side = QueenSide | KingSide deriving (Eq)
+data Side = QueenSide | KingSide deriving (Eq, Show)
 
 -- | Move datatype.
 data Move
@@ -16,4 +16,4 @@ data Move
     Castle !Color !Side
   | -- | Move a pawn from 'Coord' to another 'Coord' and promote to a new 'PieceType'.
     Promote !Coord !Coord !PieceType
-  deriving (Eq)
+  deriving (Eq, Show)
