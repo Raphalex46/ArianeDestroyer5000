@@ -29,7 +29,7 @@ validSquaresFromCoord GameState {..} coord =
               coords
                 ++ maybe
                   [] -- If Nothing, then don't add any coord
-                  (\(x, _) -> if x `elem` attackedSquares board coord then [x] else []) -- If the pawn attacks an enPassant possbility, add it
+                  (\x -> if x `elem` attackedSquares board coord then [x] else []) -- If the pawn attacks an enPassant possbility, add it
                   enPassantCoord
             _ -> coords
 
@@ -73,7 +73,7 @@ isMovePawnTwoRanks _ _ = False
 isEnPassant :: GameState -> Move -> Bool
 isEnPassant GameState {..} (MovePiece src dst) =
   case enPassantCoord of
-    Just (target, _)
+    Just target
       | isPieceType (board ! src) Pawn -> dst == target
       | otherwise -> False
     Nothing -> False
@@ -81,10 +81,10 @@ isEnPassant _ _ = False
 
 -- | Given a `Move`, get the possible en passant `Coord` and current position
 -- of the moved pawn if there is an en passant possiblity
-getEnPassantCoord :: Board -> Move -> Maybe (Coord, Coord)
+getEnPassantCoord :: Board -> Move -> Maybe Coord
 getEnPassantCoord board move@(MovePiece (sRow, sCol) (tRow, tCol)) =
   if isMovePawnTwoRanks board move
-    then let dir = signum (tRow - sRow) in Just ((sRow + dir, sCol), (tRow, tCol))
+    then let dir = signum (tRow - sRow) in Just (sRow + dir, sCol)
     else Nothing
 getEnPassantCoord _ _ = Nothing
 
@@ -95,9 +95,13 @@ applyMove :: GameState -> Move -> Either GameError Board
 applyMove gameState@GameState {..} move@(MovePiece src dst) =
   case enPassantCoord of
     Nothing -> execMove
-    Just (_, target)
-      | isEnPassant gameState move -> execMove >>= (\x -> return $ removePiece x target)
+    Just target@(tRow, tCol)
+      | isEnPassant gameState move -> execMove >>= (\x -> return $ removePiece x pawnCoord)
       | otherwise -> execMove
+      where
+        pawnCoord = case turn of
+                        White -> (tRow - 1, tCol)
+                        Black -> (tRow + 1, tCol)
   where
     execMove = case movePiece board src dst of
       Left _ -> Left GameError
