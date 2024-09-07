@@ -15,6 +15,7 @@ import Data.Char
 import Data.List
 import IO.Board
 import IO.MoveExpression
+import IO.GameState
 import qualified System.Console.ANSI as ANSI
 
 -- | All possible commands in standard mode.
@@ -127,7 +128,7 @@ executeCommand :: GameState -> Command -> Either ExecutionError (IO GameState)
 executeCommand gameState@GameState {..} command =
   case command of
     -- Simply show the board
-    Show (ShowBoard) -> Right $ putStrLn (showBoard board) >> return gameState
+    Show (ShowBoard) -> Right $ putStrLn (showState gameState) >> return gameState
     -- For showing stuff, simply use the color function
     Show (ShowAttacks coord) ->
       Right $ printColoredSquaresOfInterest (attackedSquares board coord) coord >> return gameState
@@ -136,14 +137,14 @@ executeCommand gameState@GameState {..} command =
     (MovePiece src dst) ->
       case movePiece board src dst of
         Right newBoard -> Right $ do
-          putStrLn $ showBoard newBoard
+          putStrLn $ showState gameState
           return gameState {board = newBoard}
         Left _ -> Left $ InvalidSquare
     (Play moveExpr) ->
       case decodeMoveExpression gameState moveExpr of
         Left err -> Left $ MoveExpressionError err
         Right move -> case playMove gameState move of
-          Right newGameState@GameState {board = b} -> Right $ putStrLn (showBoard b) >> return newGameState
+          Right newGameState@GameState {board = b} -> Right $ putStrLn (showState newGameState) >> return newGameState
           Left _ -> Left GameError
   where
     -- Little function to color the given squares according to the color of
