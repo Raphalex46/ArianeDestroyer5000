@@ -43,9 +43,12 @@ validMovesFromCoord gameState@GameState {..} coord =
       let coords = map (MovePiece coord) $ validSquaresFromCoord gameState coord
           candidateMoves = case ty of
             King -> coords ++ map (Castle col) (filter (isCastlePossible board col) $ castlingRights col)
+            Pawn -> map forcePawnPromotion coords
             _ -> coords
        in filter (not . moveResultsInCheck) candidateMoves
   where
+    forcePawnPromotion (MovePiece _ (_, row)) =
+      if row == lastRank board 
     moveResultsInCheck move =
       let tempBoard = applyMove gameState move
        in case tempBoard of

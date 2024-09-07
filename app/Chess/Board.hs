@@ -8,6 +8,7 @@ module Chess.Board
     Board,
     -- | Utilities for the board.
     upperRow,
+    lastRank,
     isInBounds,
     movePiece,
     removePiece,
@@ -91,6 +92,15 @@ startingBoard =
 -- | Returns the maximum row on the board
 upperRow :: Board -> Int
 upperRow = fst . snd . bounds
+
+-- | Returns the last rank for a color
+lastRank :: Board -> Color -> Int
+lastRank board col =
+  lastRank' col
+  where
+    lastRank' White = upperRow
+    lastRank' Black = lowerRow
+    ((lowerRow, _), (upperRow, _)) = bounds board
 
 -- | Tests whether or not the given 'Coord' is in the bounds of the given 'Board'.
 isInBounds :: Board -> Coord -> Bool
