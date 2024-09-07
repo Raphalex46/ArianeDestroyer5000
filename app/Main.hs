@@ -1,12 +1,14 @@
 module Main where
 
-import Chess.GameState
-import IO.Board
+import Chess.Record
+import IO.GameState
 import IO.Standard.Loop
 
 main :: IO ()
 main =
-  let s = startingState
+   let s = case gameStateFromFENString startingFENString of
+             Right g -> g
+             Left _ -> error "Failed to parse FEN String"
    in do
-        putStrLn $ showBoard (board s)
-        loop startingState
+        putStrLn $ showState s
+        loop s
