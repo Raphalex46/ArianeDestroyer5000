@@ -65,57 +65,56 @@ gameStateFromFENString str =
     -- If there are not exactly 6 fields, this is not a FEN string and the
     -- format is invalid
     _ -> Left InvalidFormat
+boardFromFEN :: String -> Either RecordParseError Board
+boardFromFEN str =
+  -- Each row is separated by a '/', we split them up and convert them
+  -- to our representation to then construct the board
+  let rows = map rowStrToRow rowsStr
+      concatRows = concat $ reverse rows
+  in if (all isJust concatRows) && (all (== 8) (map length rows)) then
+        Right $ array ((0, 0), (7, 7)) $ zip ([(x, y) | x <- [0..7], y <- [0..7]]) (catMaybes concatRows)
+     else
+        Left $ FENParseError InvalidPositions
   where
-  boardFromFEN :: String -> Either RecordParseError Board
-  boardFromFEN str =
-    -- Each row is separated by a '/', we split them up and convert them
-    -- to our representation to then construct the board
-    let rows = map rowStrToRow rowsStr
-        concatRows = concat $ reverse rows
-    in if (all isJust concatRows) && (all (== 8) (map length rows)) then
-          Right $ array ((0, 0), (7, 7)) $ zip ([(x, y) | x <- [0..7], y <- [0..7]]) (catMaybes concatRows)
-       else
-          Left $ FENParseError InvalidPositions
-    where
-      rowsStr = splitOn "/" str
-      -- Local function to convert the FEN representation of a row to our own representation
-      rowStrToRow [] = []
-      rowStrToRow (h:t)
-        | isDigit h = (replicate (read [h]) (Just Empty)) ++ (rowStrToRow t)
-        | isAlpha h = case parsePiece h of
-                        Nothing -> Nothing:rowStrToRow t
-                        Just p -> (Just $ Occ p):rowStrToRow t
-        | otherwise = Nothing:rowStrToRow t
+    rowsStr = splitOn "/" str
+    -- Local function to convert the FEN representation of a row to our own representation
+    rowStrToRow [] = []
+    rowStrToRow (h:t)
+      | isDigit h = (replicate (read [h]) (Just Empty)) ++ (rowStrToRow t)
+      | isAlpha h = case parsePiece h of
+                      Nothing -> Nothing:rowStrToRow t
+                      Just p -> (Just $ Occ p):rowStrToRow t
+      | otherwise = Nothing:rowStrToRow t
 
-  turnFromFEN :: String -> Either RecordParseError Color
-  turnFromFEN "w" = Right White
-  turnFromFEN "b" = Right Black
-  turnFromFEN _ = Left $ FENParseError InvalidTurnColor
+turnFromFEN :: String -> Either RecordParseError Color
+turnFromFEN "w" = Right White
+turnFromFEN "b" = Right Black
+turnFromFEN _ = Left $ FENParseError InvalidTurnColor
 
-  rightsFromFEN :: String -> Either RecordParseError CastlingRights
-  rightsFromFEN str =
-    -- Call to an auxiliary recursive function for building the `CastlingRights`
-    -- function. We start by calling it with empty rights.
-    rightsFromFEN' str (\_ -> [])
-    where
-      -- Base case: we simply return the rights function
-      rightsFromFEN' [] f = Right f
-      -- Parse each character from the rights string
-      rightsFromFEN' (c:cs) f
-        -- Add rights when we encounter the corresponding character
-        | c == 'k' = rightsFromFEN' cs (addToF (Black, KingSide))
-        | c == 'q' = rightsFromFEN' cs (addToF (Black, QueenSide))
-        | c == 'K' = rightsFromFEN' cs (addToF (White, KingSide))
-        | c == 'Q' = rightsFromFEN' cs (addToF (White, QueenSide))
-        | c == '-' = rightsFromFEN' cs f
-        | otherwise = Left $ FENParseError InvalidCastlingRights
-        where
-          -- Another local function for constructing the castling rights.
-          -- Calling this function adds the right to castle to `side` for `col`.
-          addToF (col, side) = (\x -> if x == col then side:f x else f x)
+rightsFromFEN :: String -> Either RecordParseError CastlingRights
+rightsFromFEN str =
+  -- Call to an auxiliary recursive function for building the `CastlingRights`
+  -- function. We start by calling it with empty rights.
+  rightsFromFEN' str (\_ -> [])
+  where
+    -- Base case: we simply return the rights function
+    rightsFromFEN' [] f = Right f
+    -- Parse each character from the rights string
+    rightsFromFEN' (c:cs) f
+      -- Add rights when we encounter the corresponding character
+      | c == 'k' = rightsFromFEN' cs (addToF (Black, KingSide))
+      | c == 'q' = rightsFromFEN' cs (addToF (Black, QueenSide))
+      | c == 'K' = rightsFromFEN' cs (addToF (White, KingSide))
+      | c == 'Q' = rightsFromFEN' cs (addToF (White, QueenSide))
+      | c == '-' = rightsFromFEN' cs f
+      | otherwise = Left $ FENParseError InvalidCastlingRights
+      where
+        -- Another local function for constructing the castling rights.
+        -- Calling this function adds the right to castle to `side` for `col`.
+        addToF (col, side) = (\x -> if x == col then side:f x else f x)
 
-  enPassantCoordFromFEN :: String -> Either RecordParseError (Maybe Coord)
-  enPassantCoordFromFEN "-" = Right Nothing
-  enPassantCoordFromFEN str = case parseCoord str of
-                                Just coord -> Right $ Just coord
-                                Nothing -> Left $ FENParseError InvalidCoord
+enPassantCoordFromFEN :: String -> Either RecordParseError (Maybe Coord)
+enPassantCoordFromFEN "-" = Right Nothing
+enPassantCoordFromFEN str = case parseCoord str of
+                              Just coord -> Right $ Just coord
+                              Nothing -> Left $ FENParseError InvalidCoord
