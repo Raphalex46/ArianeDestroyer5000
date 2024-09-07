@@ -132,19 +132,22 @@ executeCommand gameState@GameState {..} command =
     -- For showing stuff, simply use the color function
     Show (ShowAttacks coord) ->
       Right $ printColoredSquaresOfInterest (attackedSquares board coord) coord >> return gameState
+    -- Show moves that are valid from a coordinate
     Show (ShowValidMoves coord) ->
       Right $ printColoredSquaresOfInterest (map (getDstCoord board) (validMovesFromCoord gameState coord)) coord >> return gameState
+    -- Move a piece on the board without rule checks
     (MovePiece src dst) ->
       case movePiece board src dst of
         Right newBoard -> Right $ do
           putStrLn $ showState gameState
           return gameState {board = newBoard}
         Left _ -> Left $ InvalidSquare
+    -- Play a move, with rules check and everything, advancing the game state
     (Play moveExpr) ->
       case decodeMoveExpression gameState moveExpr of
         Left err -> Left $ MoveExpressionError err
         Right move -> case playMove gameState move of
-          Right newGameState@GameState {board = b} -> Right $ putStrLn (showState newGameState) >> return newGameState
+          Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
           Left _ -> Left GameError
   where
     -- Little function to color the given squares according to the color of

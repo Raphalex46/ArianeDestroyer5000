@@ -4,6 +4,7 @@ module IO.GameState (showState) where
 import Chess.GameState
 import IO.Board
 
+-- | Print a `GameState`.
 showState :: GameState -> String
 showState GameState {..} =
   showBoard board ++
