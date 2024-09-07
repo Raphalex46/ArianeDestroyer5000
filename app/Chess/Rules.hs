@@ -43,9 +43,17 @@ validMovesFromCoord gameState@GameState {..} coord =
       let coords = map (MovePiece coord) $ validSquaresFromCoord gameState coord
           candidateMoves = case ty of
             King -> coords ++ map (Castle col) (filter (isCastlePossible board col) $ castlingRights col)
+            Pawn -> concat $ map (forcePawnPromotion col) coords
             _ -> coords
        in filter (not . moveResultsInCheck) candidateMoves
   where
+    -- Function to translate pawn moves to the last rank to pawn promotion
+    forcePawnPromotion col move@(MovePiece src dst@(row, _)) =
+      if row == lastRank board col then
+        map (Promote src dst) [Rook, Knight, Bishop, Queen]
+      else
+        [move]
+    forcePawnPromotion _ otherMove = [otherMove]
     moveResultsInCheck move =
       let tempBoard = applyMove gameState move
        in case tempBoard of
@@ -118,7 +126,11 @@ applyMove GameState {..} (Castle color side) =
         moveKingBoard <- movePiece board kingPos (kingRow, newKingCol)
         moveRookBoard <- movePiece moveKingBoard rookPos (kingRow, newKingCol - direction)
         return moveRookBoard
-
+-- Handle pawn promotion
+applyMove GameState {..} (Promote src dst pt) =
+  case movePiece board src dst of
+    Left _ -> Left GameError
+    Right b -> Right $ setPiece b dst (Piece (turn, pt))
 -- | Returns an updated `CastlingRights` function given the `GameState` and an
 -- applied `Move`.
 --

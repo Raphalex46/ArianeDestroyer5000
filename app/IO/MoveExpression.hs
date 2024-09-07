@@ -52,6 +52,13 @@ parseMoveExpression dstStr@[_, _] =
   do
     dst <- parseCoord dstStr
     Just $ PieceTypeMove Pawn dst
+-- Parse pawn promotion
+parseMoveExpression [srcCol, srcRow, dstCol, dstRow, pieceType] =
+  do
+  src <- parseCoord [srcCol, srcRow]
+  dst <- parseCoord [dstCol, dstRow]
+  pt <- parsePieceType pieceType
+  Just $ ConcreteMove $ Promote src dst pt
 parseMoveExpression _ = Nothing
 
 -- | Read a move expression from stdin.

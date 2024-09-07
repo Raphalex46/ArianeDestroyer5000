@@ -8,9 +8,11 @@ module Chess.Board
     Board,
     -- | Utilities for the board.
     upperRow,
+    lastRank,
     isInBounds,
     movePiece,
     removePiece,
+    setPiece,
     -- | Starting board.
     startingBoard,
     showSquare,
@@ -91,6 +93,15 @@ startingBoard =
 -- | Returns the maximum row on the board
 upperRow :: Board -> Int
 upperRow = fst . snd . bounds
+
+-- | Returns the last rank for a color
+lastRank :: Board -> Color -> Int
+lastRank board col =
+  lastRank' col
+  where
+    lastRank' White = upperRow
+    lastRank' Black = lowerRow
+    ((lowerRow, _), (upperRow, _)) = bounds board
 
 -- | Tests whether or not the given 'Coord' is in the bounds of the given 'Board'.
 isInBounds :: Board -> Coord -> Bool
@@ -177,3 +188,8 @@ movePiece board src dst
 -- | Remove piece at the given `Coord` from the board
 removePiece :: Board -> Coord -> Board
 removePiece board coord = board // [(coord, Empty)]
+
+-- | Set a piece at the gieven coord.
+setPiece :: Board -> Coord -> Piece -> Board
+setPiece board coord piece =
+  board // [(coord, Occ piece)]
