@@ -10,4 +10,4 @@ showState GameState {..} =
   showBoard board ++
   "\n" ++
   "Active color: " ++ show turn ++ "\n" ++
-  "Turn: " ++ show (fullMoveClock + 1)
+  "Turn: " ++ show fullMoveClock

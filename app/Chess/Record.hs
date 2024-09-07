@@ -15,7 +15,7 @@ import Chess.Coord
 
 -- | FEN string corresponding to the starting position.
 startingFENString :: String
-startingFENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0"
+startingFENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 -- | Error type for parsing errors.
 data RecordParseError =
