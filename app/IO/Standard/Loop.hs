@@ -16,6 +16,7 @@ prompt = "> "
 loop :: GameState -> IO ()
 loop gameState
   | isKingInCheckmate gameState (turn gameState) = putStrLn "checkmate!"
+  | isPlayerInPat gameState (turn gameState) = putStrLn "pat!"
   | otherwise =
     do
       putStr prompt

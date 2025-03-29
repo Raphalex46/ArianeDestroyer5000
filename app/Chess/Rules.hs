@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Functions for the rules of chess
-module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate) where
+module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isPlayerInPat) where
 
 import Data.List
 
@@ -66,8 +66,18 @@ validMovesFromCoord gameState@GameState {..} coord =
 -- Checks whether the king of the given `Color` is in checkmate or not
 isKingInCheckmate :: GameState -> Color -> Bool
 isKingInCheckmate gameState@GameState {..} color =
-  let allyPiecesCoord = getSquaresOfCol board color
-  in (isKingInCheck board color) && (all null $ map (validMovesFromCoord gameState . fst) allyPiecesCoord)
+  (isKingInCheck board color) && (length $ getAllValidMoves gameState color) == 0
+
+-- Get the list of all valid moves for a given `Color`
+getAllValidMoves :: GameState -> Color -> [Move]
+getAllValidMoves gameState@GameState{..} color =
+  let allyPiecesCoord = getSquaresOfCol board color in
+  concat $ map (validMovesFromCoord gameState . fst) allyPiecesCoord
+
+-- Checks whether the player of the given `Color` is in a pat situation (no moves available)
+isPlayerInPat :: GameState -> Color -> Bool
+isPlayerInPat gameState@GameState {..} color =
+  (not $ isKingInCheck board color) && (length $ getAllValidMoves gameState color) == 0
 
 -- Various predicates on moves
 
@@ -90,7 +100,7 @@ isEnPassant _ _ = False
 -- | Given a `Move`, get the possible en passant `Coord` and current position
 -- of the moved pawn if there is an en passant possiblity
 getEnPassantCoord :: Board -> Move -> Maybe Coord
-getEnPassantCoord board move@(MovePiece (sRow, sCol) (tRow, tCol)) =
+getEnPassantCoord board move@(MovePiece (sRow, sCol) (tRow, _)) =
   if isMovePawnTwoRanks board move
     then let dir = signum (tRow - sRow) in Just (sRow + dir, sCol)
     else Nothing
@@ -103,7 +113,7 @@ applyMove :: GameState -> Move -> Either GameError Board
 applyMove gameState@GameState {..} move@(MovePiece src dst) =
   case enPassantCoord of
     Nothing -> execMove
-    Just target@(tRow, tCol)
+    Just (tRow, tCol)
       | isEnPassant gameState move -> execMove >>= (\x -> return $ removePiece x pawnCoord)
       | otherwise -> execMove
       where
@@ -115,7 +125,7 @@ applyMove gameState@GameState {..} move@(MovePiece src dst) =
       Left _ -> Left GameError
       Right board -> Right board
 -- Handle castling
-applyMove GameState {..} (Castle color side) =
+applyMove GameState {..} (Castle _ side) =
   let kingPos@(kingRow, kingCol) = getKingCoord board turn
       rookPos = castleRookPos board turn side
       direction = case side of
