@@ -2,8 +2,9 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Functions for the rules of chess
-module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isPlayerInPat) where
+module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isKingInStalemate, getEndType, WinType (..), EndGameType (..), DrawType (..)) where
 
+import Control.Applicative
 import Data.List
 
 import Chess.Board
@@ -14,7 +15,22 @@ import Chess.GameState
 import Chess.Moves
 import Chess.Pieces
 
+-- | Datatype describing a game error.
 data GameError = GameError deriving (Show)
+
+-- | In case of a draw, this is the reason for the draw.
+data DrawType = Stalemate | DeadPosition | Handshake | FiftyMoves | Cycle
+
+-- | In case of the game ending in a win, describes the reason for the win.
+data WinType = Checkmate | Resign
+
+-- | Type of endgame situation
+data EndGameType
+  =
+  -- | In case of a win, contains the color that wins and the reason of the win.
+    Win(Color, WinType)
+  -- | In case of a draw, contains the reason for the draw.
+  | Draw(DrawType)
 
 -- | Returns a list of coordinates representing valid squares the piece at
 -- the given `Coord` can move to
@@ -74,9 +90,9 @@ getAllValidMoves gameState@GameState{..} color =
   let allyPiecesCoord = getSquaresOfCol board color in
   concat $ map (validMovesFromCoord gameState . fst) allyPiecesCoord
 
--- Checks whether the player of the given `Color` is in a pat situation (no moves available)
-isPlayerInPat :: GameState -> Color -> Bool
-isPlayerInPat gameState@GameState {..} color =
+-- Checks whether the player of the given `Color` is in a stalemate situation (no moves available)
+isKingInStalemate :: GameState -> Color -> Bool
+isKingInStalemate gameState@GameState {..} color =
   (not $ isKingInCheck board color) && (length $ getAllValidMoves gameState color) == 0
 
 -- Various predicates on moves
@@ -186,3 +202,16 @@ playMove gameState@GameState {..} move
             Left _ -> Left GameError
       | otherwise = Left GameError
     src = getSrcCoord board move
+
+-- | Get the type of ending for this game state.
+-- If the game is not over yet, returns `Nothing`, otherwise, returns the
+-- reason for the ending of the game
+getEndType :: GameState -> Maybe EndGameType
+getEndType gs =
+    (find (isKingInCheckmate gs) colors >>=
+      (\col -> Just $ Win(col, Checkmate))) <|>
+    (find (isKingInStalemate gs) colors >>=
+      (\_ -> Just $ Draw(Stalemate))) <|>
+    Nothing
+  where
+    colors = [Black, White]

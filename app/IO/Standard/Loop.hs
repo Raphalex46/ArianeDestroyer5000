@@ -14,17 +14,29 @@ prompt = "> "
 --
 -- Start with a given starting 'GameState'
 loop :: GameState -> IO ()
-loop gameState
-  | isKingInCheckmate gameState (turn gameState) = putStrLn "checkmate!"
-  | isPlayerInPat gameState (turn gameState) = putStrLn "pat!"
-  | otherwise =
-    do
-      putStr prompt
-      hFlush stdout
-      input <- getLine
-      case (parseCommand input) of
-        Right command -> do
-          case executeCommand gameState command of
-            Left err -> putStrLn (show err) >> loop gameState
-            Right newBoard -> newBoard >>= loop
-        Left err -> putStrLn (show err) >> loop gameState
+loop gameState =
+  case (getEndType gameState) of
+    Just endType -> putStrLn $ endTypeStr endType
+    Nothing ->
+      do
+        putStr prompt
+        hFlush stdout
+        input <- getLine
+        case (parseCommand input) of
+          Right command -> do
+            case executeCommand gameState command of
+              Left err -> putStrLn (show err) >> loop gameState
+              Right newBoard -> newBoard >>= loop
+          Left err -> putStrLn (show err) >> loop gameState
+  where
+    endTypeStr endType =
+      case endType of
+        Win(col, winType) -> (show col) ++ "wins by " ++ winTypeStr winType
+        Draw(drawType) -> "draw: " ++ drawTypeStr drawType
+      where
+        winTypeStr wt = case wt of
+                          Checkmate -> "checkmate"
+                          Resign -> "resignation"
+        drawTypeStr dt = case dt of
+                          Stalemate -> "stalemate" 
+                          _ -> "unimplemented"
