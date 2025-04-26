@@ -11,8 +11,8 @@ type Coord = (Int, Int)
 -- | Converts a column number to a letter.
 --
 -- Returns 'Nothing' if the given column is out of bounds of a chess board.
-colToLet :: Int -> Maybe Char
-colToLet i
+_colToLet :: Int -> Maybe Char
+_colToLet i
   | 0 <= i && i <= 7 = find (\x -> ord x == i - ord 'A') ['A' .. 'H']
   | otherwise = Nothing
 

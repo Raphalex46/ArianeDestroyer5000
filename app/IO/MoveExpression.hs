@@ -62,16 +62,16 @@ parseMoveExpression [srcCol, srcRow, dstCol, dstRow, pieceType] =
 parseMoveExpression _ = Nothing
 
 -- | Read a move expression from stdin.
-readMoveExpression :: Mode -> IO MoveExpression
-readMoveExpression Standard =
+_readMoveExpression :: Mode -> IO MoveExpression
+_readMoveExpression Standard =
   do
     line <- getLine
     case parseMoveExpression line of
       Nothing -> do
         putStrLn "Invalid move input. Please enter a different move."
-        readMoveExpression Standard
+        _readMoveExpression Standard
       Just moveExpr -> return moveExpr
-readMoveExpression UCI = error "Not yet implemented"
+_readMoveExpression UCI = error "Not yet implemented"
 
 -- | Given the current `GameState`, decode a `MoveExpression` to an actual
 -- `Move`, usable by the rest of the engine.
