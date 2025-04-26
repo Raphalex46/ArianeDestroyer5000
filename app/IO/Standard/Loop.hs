@@ -39,4 +39,6 @@ loop gameState =
                           Resign -> "resignation"
         drawTypeStr dt = case dt of
                           Stalemate -> "stalemate" 
+                          FiftyMoves -> "fifty moves without pawn move or capture"
+                          ThreefoldRepetition -> "threefold repetition of the position"
                           _ -> "unimplemented"

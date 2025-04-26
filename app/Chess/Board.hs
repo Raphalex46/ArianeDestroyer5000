@@ -47,6 +47,7 @@ data Square
     Empty
   | -- | Square occupied with a piece.
     Occ !Piece
+  deriving(Eq)
 
 -- | Parse a square from a character.
 --

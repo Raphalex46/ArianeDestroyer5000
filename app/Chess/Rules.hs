@@ -19,7 +19,7 @@ import Chess.Pieces
 data GameError = GameError deriving (Show)
 
 -- | In case of a draw, this is the reason for the draw.
-data DrawType = Stalemate | DeadPosition | Handshake | FiftyMoves | Cycle
+data DrawType = Stalemate | DeadPosition | Handshake | FiftyMoves | ThreefoldRepetition
 
 -- | In case of the game ending in a win, describes the reason for the win.
 data WinType = Checkmate | Resign
@@ -52,13 +52,13 @@ validSquaresFromCoord GameState {..} coord =
 -- | Returns a list of possible move that can be legally done with the piece
 -- at the given `Coord`
 validMovesFromCoord :: GameState -> Coord -> [Move]
-validMovesFromCoord gameState@GameState {..} coord =
+validMovesFromCoord gameState@GameState {castlingRights=CastlingRights rightsF, ..} coord =
   case board ! coord of
     Empty -> []
     Occ (Piece (col, ty)) ->
       let coords = map (MovePiece coord) $ validSquaresFromCoord gameState coord
           candidateMoves = case ty of
-            King -> coords ++ map (Castle col) (filter (isCastlePossible board col) $ castlingRights col)
+            King -> coords ++ map (Castle col) (filter (isCastlePossible board col) $ rightsF col)
             Pawn -> concat $ map (forcePawnPromotion col) coords
             _ -> coords
        in filter (not . moveResultsInCheck) candidateMoves
@@ -164,22 +164,22 @@ applyMove GameState {..} (Promote src dst pt) =
 -- all castling rights for the corresponding color. Moving a rook removes
 -- castling rights for the color on the side of the moved rook.
 updateCastlingRights :: GameState -> Move -> CastlingRights
-updateCastlingRights GameState {..} move =
+updateCastlingRights GameState {castlingRights=castlingRights@(CastlingRights rightsF), ..} move =
   case move of
-    Castle col _ -> removeRights col [QueenSide, KingSide]
+    Castle col _ -> CastlingRights $ removeRights col [QueenSide, KingSide]
     MovePiece src _ -> case (board ! src) of
       Empty -> castlingRights
       Occ (Piece (col, ty)) -> case ty of
-        King -> removeRights col [QueenSide, KingSide]
-        Rook -> removeRights col [(getRookSide src)]
+        King -> CastlingRights $ removeRights col [QueenSide, KingSide]
+        Rook -> CastlingRights $ removeRights col [(getRookSide src)]
         _ -> castlingRights
     _ -> castlingRights
   where
     removeRights col sides c =
       if c == col then
-        (castlingRights c) \\ sides
+        (rightsF c) \\ sides
       else
-        castlingRights c
+        rightsF c
       
 
 -- | Play a move, updating the 'GameState' accordingly
@@ -192,12 +192,24 @@ playMove gameState@GameState {..} move
       | move `elem` (validMovesFromCoord gameState src) =
           case applyMove gameState move of
             Right b ->
+              let resetHistory = moveIsCapture board move || moveIsPiece board Pawn move in
               Right
                 gameState
                   { board = b,
                     enPassantCoord = getEnPassantCoord board move,
                     turn = opp turn,
-                    castlingRights = updateCastlingRights gameState move
+                    castlingRights = updateCastlingRights gameState move,
+                    history = if resetHistory
+                                then
+                                  []
+                                else
+                                  -- `:` is faster than `++` so we add the position to the head of the list :)
+                                  (historyStateFromGameState gameState):history,
+                    halfMoveClock = if resetHistory then 0 else
+                                      case turn of
+                                      White -> halfMoveClock
+                                      Black -> halfMoveClock + 1,
+                    fullMoveClock = fullMoveClock + 1
                   }
             Left _ -> Left GameError
       | otherwise = Left GameError
@@ -212,6 +224,11 @@ getEndType gs =
       (\col -> Just $ Win(col, Checkmate))) <|>
     (find (isKingInStalemate gs) colors >>=
       (\_ -> Just $ Draw(Stalemate))) <|>
+    if halfMoveClock gs >= 100 then return $ Draw(FiftyMoves) else Nothing <|>
+    if (countRep :: Integer) >= 2 then return $ Draw(ThreefoldRepetition) else Nothing <|>
     Nothing
   where
     colors = [Black, White]
+    countRep =
+      let histState = historyStateFromGameState gs in
+        foldl (\cnt x -> if x == histState then cnt + 1 else cnt) 0 $ history gs

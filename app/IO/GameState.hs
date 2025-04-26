@@ -10,4 +10,5 @@ showState GameState {..} =
   showBoard board ++
   "\n" ++
   "Active color: " ++ show turn ++ "\n" ++
-  "Turn: " ++ show fullMoveClock
+  "Turn: " ++ show fullMoveClock ++ "\n" ++
+  "Turns without take or pawn move: " ++ (show $ length history)

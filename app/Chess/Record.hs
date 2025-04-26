@@ -60,7 +60,8 @@ gameStateFromFENString str =
           castlingRights = rights,
           turn = turn,
           halfMoveClock = halfMoveClock,
-          fullMoveClock = fullMoveClock
+          fullMoveClock = fullMoveClock,
+          history = []
         }
     -- If there are not exactly 6 fields, this is not a FEN string and the
     -- format is invalid
@@ -95,7 +96,7 @@ rightsFromFEN :: String -> Either RecordParseError CastlingRights
 rightsFromFEN str =
   -- Call to an auxiliary recursive function for building the `CastlingRights`
   -- function. We start by calling it with empty rights.
-  rightsFromFEN' str (\_ -> [])
+  rightsFromFEN' str (\_ -> []) >>= (\x -> Right $ CastlingRights x)
   where
     -- Base case: we simply return the rights function
     rightsFromFEN' [] f = Right f
