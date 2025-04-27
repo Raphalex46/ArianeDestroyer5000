@@ -41,4 +41,5 @@ loop gameState =
                           Stalemate -> "stalemate" 
                           FiftyMoves -> "fifty moves without pawn move or capture"
                           ThreefoldRepetition -> "threefold repetition of the position"
+                          DeadPosition -> "reached a dead position"
                           _ -> "unimplemented"
