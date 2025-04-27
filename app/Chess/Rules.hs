@@ -215,6 +215,32 @@ playMove gameState@GameState {..} move
       | otherwise = Left GameError
     src = getSrcCoord board move
 
+-- | Check if the position is a dead position (insufficient material for both sides).
+-- I'm using the heuristics from chess.com here: https://support.chess.com/en/articles/8705277-what-does-insufficient-mating-material-mean.
+-- This is not complete and does not handle more complicated types of dead positions, but I think it's
+-- sufficient for now.
+isDeadPosition :: Board -> Bool
+isDeadPosition board =
+  all insufficientMaterial allColors || any twoKnightsVsLoneKing allColors
+  where
+    insufficientMaterial col =
+      let pieces = remainingPieceTypes col in
+      -- King of ugly, if we filter the list for only knights, bishops
+      -- and kings and we get a list of lengths smaller than 2, then
+      -- that means we can only have insufficient material.
+              length (filter (\x -> x == King || x == Knight || x == Bishop) pieces) <= 2
+    twoKnightsVsLoneKing col =
+      let pieces = remainingPieceTypes col
+          oppPieces = remainingPieceTypes (opp col) in
+          -- Here, just use list difference (we don't know the order).
+          case pieces \\ [Knight, Knight, King] of
+            [] -> oppPieces == [King]
+            _ -> False
+    remainingPieceTypes col =
+            foldl ((\acc x-> case snd x of
+                               Empty -> acc
+                               Occ (Piece(_, pt)) -> pt:acc)) [] $ getSquaresOfCol board col
+
 -- | Get the type of ending for this game state.
 -- If the game is not over yet, returns `Nothing`, otherwise, returns the
 -- reason for the ending of the game
@@ -226,6 +252,7 @@ getEndType gs =
       (\_ -> Just $ Draw(Stalemate))) <|>
     if halfMoveClock gs >= 100 then return $ Draw(FiftyMoves) else Nothing <|>
     if (countRep :: Integer) >= 2 then return $ Draw(ThreefoldRepetition) else Nothing <|>
+    if isDeadPosition (board gs) then return $ Draw(DeadPosition) else Nothing <|>
     Nothing
   where
     colors = [Black, White]
