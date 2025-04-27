@@ -11,6 +11,7 @@ import Chess.GameAnalysis
 import Chess.GameState
 import Chess.Pieces
 import Chess.Rules
+import Chess.Record
 import Data.Char
 import Data.List
 import IO.Board
@@ -24,7 +25,10 @@ data Command
     Show ShowCommand
   | -- | Move a piece from one position to another.
     MovePiece Coord Coord
+    -- | Play a move, with a rule check.
   | Play MoveExpression
+    -- | Load a new `GameState` from a `FENString`
+  | Load FENString
 
 -- | All possible show commands
 data ShowCommand
@@ -53,17 +57,15 @@ data ParserError
   deriving (Show)
 
 -- | Errors that can occur when executing a command.
-data ExecutionError = InvalidSquare | MoveExpressionError DecodeError | GameError
+data ExecutionError = InvalidSquare | MoveExpressionError DecodeError | GameError | LoadError RecordParseError
   deriving
     ( -- | The given square is invalid.
       Show
     )
 
--- | Prepare a string for parsing
---
--- We split the string and lower it for easier analysis.
-prepareString :: String -> [String]
-prepareString = words . (map toLower)
+-- | Lower a string for easier analysis
+prepareString :: String -> String
+prepareString = map toLower
 
 -- | Parse a command
 --
@@ -72,12 +74,16 @@ prepareString = words . (map toLower)
 -- partial commands
 parseCommand :: String -> Either ParserError Command
 parseCommand input =
-  case prepareString input of
+  case words input of
     (str : strs)
-      | str `isPrefixOf` "show" -> parseShowCommand strs
-      | str `isPrefixOf` "move" -> parseMoveCommand strs
-      | str `isPrefixOf` "play" -> parsePlayCommand strs
+      | cmd `isPrefixOf` "show" -> parseShowCommand $ map prepareString strs
+      | cmd `isPrefixOf` "move" -> parseMoveCommand $ map prepareString strs
+      | cmd `isPrefixOf` "play" -> parsePlayCommand $ map prepareString strs
+      -- We don't want to lower the arguments to load because `FENStrings` are case sensitive.
+      | cmd `isPrefixOf` "load" -> parseLoadCommand strs
       | otherwise -> Left InvalidCommand
+      where
+        cmd = prepareString str
     [] -> Left NoCommand
 
 -- | Parse a show command
@@ -116,10 +122,15 @@ parseMoveCommand [[c1, r1, c2, r2]] =
 parseMoveCommand (_ : _) = Left ExtraCharacters
 parseMoveCommand [] = Left MissingArgument
 
+-- | Parse a play command
 parsePlayCommand :: [String] -> Either ParserError Command
 parsePlayCommand [str] = maybe (Left InvalidArgument) (Right . Play) $ parseMoveExpression str
 parsePlayCommand (_ : _) = Left ExtraCharacters
 parsePlayCommand [] = Left MissingArgument
+
+-- | Parse a load command
+parseLoadCommand :: [String] -> Either ParserError Command
+parseLoadCommand strs = Right $ Load $ intercalate " " strs
 
 -- | Execute the given 'Command' with the given 'GameState'.
 --
@@ -149,6 +160,11 @@ executeCommand gameState@GameState {..} command =
         Right move -> case playMove gameState move of
           Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
           Left _ -> Left GameError
+    -- Load a `FENString`, replacing the current `GameState`.
+    (Load fen) ->
+      case gameStateFromFENString fen of
+        Left recordErr -> Left $ LoadError recordErr
+        Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
   where
     -- Little function to color the given squares according to the color of
     -- the piece on them.

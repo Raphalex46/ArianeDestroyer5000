@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-module Chess.Record (gameStateFromFENString, startingFENString) where
+module Chess.Record (gameStateFromFENString, startingFENString, FENString, RecordParseError) where
 
 import Data.List.Split
 import Data.Char
@@ -13,8 +13,11 @@ import Chess.Pieces
 import Chess.Moves
 import Chess.Coord
 
+-- | A FENString is just a normal string
+type FENString = String
+
 -- | FEN string corresponding to the starting position.
-startingFENString :: String
+startingFENString :: FENString
 startingFENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 -- | Error type for parsing errors.
@@ -23,6 +26,7 @@ data RecordParseError =
     InvalidFormat
   -- | There was an error while parsing a FEN string.
   | FENParseError FENParseError
+  deriving(Show)
 
 -- | Error type for FEN parsing errors.
 data FENParseError =
@@ -32,11 +36,11 @@ data FENParseError =
   | InvalidCoord
   | InvalidHalfMoveClock
   | InvalidFullMoveClock
-
+  deriving(Show)
 -- | Return a game state loaded from a FEN string.
 --
 -- | For more information on FEN strings, see: https://www.chessprogramming.org/Forsyth-Edwards_Notation
-gameStateFromFENString :: String -> (Either RecordParseError GameState)
+gameStateFromFENString :: FENString -> (Either RecordParseError GameState)
 gameStateFromFENString str =
   -- A FEN string is made of 6 space-separated fields, we split them up like this:
   case (splitOn " " str) of
