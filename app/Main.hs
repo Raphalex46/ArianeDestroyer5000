@@ -5,6 +5,7 @@ import Chess.Colors
 import Bot
 import Cli
 import IO.Standard.Loop
+import IO.GameState
 
 main :: IO ()
 main = playGame =<< execOptionsParser

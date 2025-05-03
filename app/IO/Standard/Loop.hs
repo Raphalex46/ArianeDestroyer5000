@@ -34,9 +34,8 @@ loop Config {..} gs =
         Just endType -> putStrLn $ endTypeStr endType
         Nothing ->
           do
-            putStrLn (showState gameState)
-            case (player $ turn gameState) of
-              Human -> do
+            case (bots $ turn gameState) of
+              Nothing -> do
                   putStr prompt
                   hFlush stdout
                   input <- getLine
@@ -49,7 +48,7 @@ loop Config {..} gs =
               Bot bt ->
                 case playMove gameState (selectMove bt gameState) of
                   Left err -> error $ "bot error: " ++ (show err)
-                  Right newBoard -> loop' newBoard
+                  Right newBoard -> (putStrLn $ showState newBoard) >> loop' newBoard
 
       where
         endTypeStr endType =

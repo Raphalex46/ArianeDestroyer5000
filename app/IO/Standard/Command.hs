@@ -158,7 +158,7 @@ executeCommand gameState@GameState {..} command =
       case decodeMoveExpression gameState moveExpr of
         Left err -> Left $ MoveExpressionError err
         Right move -> case playMove gameState move of
-          Right newGameState -> Right $ return newGameState
+          Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
           Left _ -> Left GameError
     -- Load a `FENString`, replacing the current `GameState`.
     (Load fen) ->
