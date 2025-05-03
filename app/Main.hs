@@ -1,8 +1,9 @@
 module Main where
 
 import Chess.Record
+import Chess.Colors
+import Bot
 import Cli
-import IO.GameState
 import IO.Standard.Loop
 
 main :: IO ()
@@ -13,6 +14,11 @@ playGame _ =
     let s = case gameStateFromFENString startingFENString of
             Right g -> g
             Left _ -> error "Failed to parse FEN String"
+        config = Config {
+          player = (\c -> case c of
+                            White -> Human
+                            Black -> Bot Random
+              )
+        }
      in do
-            putStrLn $ showState s
-            loop s
+            loop config s

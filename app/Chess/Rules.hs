@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Functions for the rules of chess
-module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isKingInStalemate, getEndType, WinType (..), EndGameType (..), DrawType (..)) where
+module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isKingInStalemate, getEndType, WinType (..), EndGameType (..), DrawType (..), getAllValidMoves) where
 
 import Control.Applicative
 import Data.List
