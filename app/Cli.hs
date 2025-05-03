@@ -1,15 +1,13 @@
 module Cli (execOptionsParser, Options (..)) where
 
 import Options.Applicative
-
--- | Type of player : either a bot of a given type or a human.
-data PlayerType = Human | Bot BotType deriving(Read, Show)
--- | Type of bot.
-data BotType = Random deriving(Read, Show)
+import IO.Standard.Loop
+import Bot
 
 -- | Command line options record.
 data Options = Options
-    { opponent :: PlayerType
+    { whitePlayer :: PlayerType,
+      blackPlayer :: PlayerType
     }
 
 -- | Options parser using optparse-applicative.
@@ -17,10 +15,17 @@ options :: Parser Options
 options =
     Options
         <$> option auto
-            ( long "opponent"
+            ( long "white"
                 <> metavar "TYPE"
-                <> help "Type of opponent to play against."
+                <> help "Type of player for the white pieces"
                 <> value Human
+            )
+        <*> option auto
+            (
+              long "black"
+                <> metavar "TYPE"
+                <> help "Type of player for the black pieces"
+                <> value (Bot Random)
             )
 
 -- | Options parser with program description.

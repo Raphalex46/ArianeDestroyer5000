@@ -11,7 +11,7 @@ import System.IO
 import Bot
 
 -- | Type of player: can be either a bot or a human
-data PlayerType = Human | Bot BotType
+data PlayerType = Human | Bot BotType deriving (Show, Read)
 
 -- | A configuration for the game: which players are humans or bots
 data Config = Config {
