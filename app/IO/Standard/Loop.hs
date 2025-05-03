@@ -59,7 +59,7 @@ loop config@Config{..} gs =
     printErrAndReturn err gs = putStrLn (show err) >> (loop' gs)
     endTypeStr endType =
       case endType of
-        Win (col, winType) -> (show col) ++ "wins by " ++ winTypeStr winType
+        Win (col, winType) -> (show col) ++ " wins by " ++ winTypeStr winType
         Draw (drawType) -> "draw: " ++ drawTypeStr drawType
      where
       winTypeStr wt = case wt of
