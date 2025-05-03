@@ -39,7 +39,7 @@ validSquaresFromCoord GameState {..} coord =
   case board ! coord of
     Empty -> []
     Occ (Piece (col, ty)) ->
-      let coords = filter (not . (flip isCol) col . (board !)) $ movableSquares board coord
+      let coords = filter (\c -> let sq = board ! c in not (sq `isPieceType` King || sq `isCol` col)) $ movableSquares board coord
        in case ty of
             Pawn ->
               coords

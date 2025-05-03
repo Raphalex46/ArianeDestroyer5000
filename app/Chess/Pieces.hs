@@ -30,7 +30,7 @@ allTypes :: [PieceType]
 allTypes = enumFrom Pawn
 
 -- | A piece is simply a combination of a 'Color' and a 'PieceType'.
-data Piece = Piece (Color, PieceType) deriving(Eq)
+data Piece = Piece (Color, PieceType) deriving(Eq, Show)
 
 -- | Converts a 'Char' to a 'PieceType'.
 --
