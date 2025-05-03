@@ -34,23 +34,29 @@ loop config@Config{..} gs =
       Nothing ->
         do
           case (bots $ turn gameState) of
-            Nothing -> do
-              putStr prompt
-              hFlush stdout
-              input <- getLine
-              case (parseCommand input) of
-                Right command -> do
-                  case executeCommand gameState command of
-                    Left err -> putStrLn (show err) >> loop' gameState
-                    Right newBoard -> newBoard >>= loop'
-                Left err -> putStrLn (show err) >> loop' gameState
-            Just bt ->
-              let (move, newBot) = (selectMove bt gameState)
-                  newConf = config{bots = (\c -> if c == (turn gameState) then return newBot else bots c)}
-               in case playMove gameState move of
-                    Left err -> error $ "bot error: " ++ (show err)
-                    Right newBoard -> (putStrLn $ showState newBoard) >> loop newConf newBoard
+            Nothing -> handleHumanPlayer
+            Just bt -> handleBotPlayer bt
    where
+    handleBotPlayer bt =
+      let (move, newBot) = (selectMove bt gameState)
+          newConf = config{bots = (\c -> if c == (turn gameState) then return newBot else bots c)}
+       in case playMove gameState move of
+            Left err -> error $ "bot error: " ++ (show err)
+            Right newBoard -> (putStrLn $ showState newBoard) >> loop newConf newBoard
+    handleHumanPlayer =
+      do
+        putStr prompt
+        hFlush stdout
+        input <- getLine
+        case (parseCommand input) of
+          Right command ->
+            do
+              case executeCommand gameState command of
+                Left err -> printErrAndReturn err gameState
+                Right newBoard -> newBoard >>= loop'
+          Left err -> printErrAndReturn err gameState
+
+    printErrAndReturn err gs = putStrLn (show err) >> (loop' gs)
     endTypeStr endType =
       case endType of
         Win (col, winType) -> (show col) ++ "wins by " ++ winTypeStr winType
