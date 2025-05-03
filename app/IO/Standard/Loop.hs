@@ -10,12 +10,9 @@ import IO.GameState
 import System.IO
 import Bot
 
--- | Type of player: can be either a bot or a human
-data PlayerType = Human | Bot BotType deriving (Show, Read)
-
 -- | A configuration for the game: which players are humans or bots
 data Config = Config {
-  player :: (Color -> PlayerType)
+  bots :: (Color -> Maybe Bot)
 }
 
 -- | The prompt.
@@ -26,7 +23,7 @@ prompt = "> "
 --
 -- Start with a given starting 'GameState'
 loop :: Config -> GameState -> IO ()
-loop Config {..} gs =
+loop config@Config {..} gs =
   loop' gs
   where
     loop' gameState =
@@ -45,8 +42,11 @@ loop Config {..} gs =
                         Left err -> putStrLn (show err) >> loop' gameState
                         Right newBoard -> newBoard >>= loop'
                     Left err -> putStrLn (show err) >> loop' gameState
-              Bot bt ->
-                case playMove gameState (selectMove bt gameState) of
+              Just bt ->
+                let (move, newBot) = (selectMove bt gameState)
+                    newConf = config {bots = (\c -> if c == (turn gameState) then return newBot else bots c)}
+                in
+                case playMove gameState move of
                   Left err -> error $ "bot error: " ++ (show err)
                   Right newBoard -> (putStrLn $ showState newBoard) >> loop' newBoard
 
