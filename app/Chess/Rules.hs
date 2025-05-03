@@ -263,7 +263,7 @@ reason for the ending of the game
 getEndType :: GameState -> Maybe EndGameType
 getEndType gs =
   ( find (isKingInCheckmate gs) colors
-      >>= (\col -> Just $ Win (col, Checkmate))
+      >>= (\col -> Just $ Win ((opp col), Checkmate))
   )
     <|> ( find (isKingInStalemate gs) colors
             >>= (\_ -> Just $ Draw (Stalemate))
