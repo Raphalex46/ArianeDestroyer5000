@@ -6,6 +6,7 @@ import Chess.Record
 import Cli
 import IO.GameState
 import IO.Standard.Loop
+import System.Random
 
 main :: IO ()
 main = playGame =<< execOptionsParser
@@ -13,21 +14,26 @@ main = playGame =<< execOptionsParser
 -- | Entry point for the game. Takes the parsed command line options as an argument.
 playGame :: Options -> IO ()
 playGame opts =
-  let
-    wp = whitePlayer opts
-    bp = blackPlayer opts
-    s = case gameStateFromFENString startingFENString of
-      Right g -> g
-      Left _ -> error "Failed to parse FEN String"
-    config =
-      Config
-        { bots =
-            ( \c -> case c of
-                White -> botFromPlayerType wp
-                Black -> botFromPlayerType bp
-            )
-        }
-   in
-    do
-      putStrLn $ showState s
-      loop config s
+  do
+    gen <- newStdGen
+    let
+      wp = whitePlayer opts
+      bp = blackPlayer opts
+      s = case gameStateFromFENString startingFENString of
+        Right g -> g
+        Left _ -> error "Failed to parse FEN String"
+      config =
+        Config
+          { bots =
+              ( \c -> case c of
+                  White -> botFromPlayerType gen wp
+                  Black -> botFromPlayerType gen bp
+              )
+          }
+     in
+      do
+        putStrLn $ showState s
+        loop config s
+ where
+  botFromPlayerType _ Human = Nothing
+  botFromPlayerType gen (Bot Random) = return $ initRandomBot gen

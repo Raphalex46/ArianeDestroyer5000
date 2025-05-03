@@ -1,5 +1,5 @@
 -- | This module contains everything related to chess bots, as well as bot implementations
-module Bot (BotType (..), selectMove, PlayerType (..), Bot (..), botFromPlayerType) where
+module Bot (BotType (..), selectMove, PlayerType (..), Bot (..), initRandomBot) where
 
 import Chess.GameState
 import Chess.Moves
@@ -25,9 +25,9 @@ data RandomBotState = RandomBotState
     randomState :: StdGen
   }
 
--- | Initialize a bot of the given type with its default state.
-initBot :: BotType -> Bot
-initBot Random = RandomBot RandomBotState{randomState = mkStdGen 106}
+-- | Initialize the random bot's state with a random number generator.
+initRandomBot :: StdGen -> Bot
+initRandomBot gen = RandomBot $ RandomBotState { randomState = gen }
 
 {- | The main thing: move selection. This takes a `Bot` and a `GameState` and
 returns the selected move as well as a new bot. This function updates the
@@ -39,14 +39,5 @@ selectMove (RandomBot botState) gs =
   case getAllValidMoves gs (turn gs) of
     [] -> error "unreachable"
     l ->
-      let state = randomState botState
-          (randInd, newState) = randomR (0, (length l) - 1) state
-       in (l !! randInd, RandomBot $ botState{randomState = newState})
-
-{- | Get a `Bot` from a `PlayerType`.
-
-This function returns `Nothing` if the `PlayerType` is human.
--}
-botFromPlayerType :: PlayerType -> Maybe Bot
-botFromPlayerType Human = Nothing
-botFromPlayerType (Bot b) = return $ initBot b
+        let (randInd, newState) = uniformR (0, (length l) - 1) (randomState botState) in
+        (l !! randInd, RandomBot $ botState{randomState = newState})
