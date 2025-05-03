@@ -1,37 +1,38 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
--- | This module contains the definitions for squares and the board, with
--- basic operations on the board and predicates on squares.
-module Chess.Board
-  ( -- | Types.
-    Square (..),
-    Board,
-    -- | Utilities for the board.
-    upperRow,
-    lastRank,
-    isInBounds,
-    movePiece,
-    removePiece,
-    setPiece,
-    -- | Starting board.
-    startingBoard,
-    showSquare,
-    -- | Predicates on squares.
-    isCol,
-    isEmpty,
-    isPieceType,
-    -- | Fetching rows and diagonals.
-    Dir (..),
-    getPartRow,
-    getPartCol,
-    DiagDir (..),
-    getPartDiag,
-    -- | Fetching piece positions
-    getKingCoord,
-    getSquaresOfCol,
-    -- | Reexported module for more advanced board manipulations.
-    module Data.Array,
-  )
+{- | This module contains the definitions for squares and the board, with
+basic operations on the board and predicates on squares.
+-}
+module Chess.Board (
+  -- | Types.
+  Square (..),
+  Board,
+  -- | Utilities for the board.
+  upperRow,
+  lastRank,
+  isInBounds,
+  movePiece,
+  removePiece,
+  setPiece,
+  -- | Starting board.
+  startingBoard,
+  showSquare,
+  -- | Predicates on squares.
+  isCol,
+  isEmpty,
+  isPieceType,
+  -- | Fetching rows and diagonals.
+  Dir (..),
+  getPartRow,
+  getPartCol,
+  DiagDir (..),
+  getPartDiag,
+  -- | Fetching piece positions
+  getKingCoord,
+  getSquaresOfCol,
+  -- | Reexported module for more advanced board manipulations.
+  module Data.Array,
+)
 where
 
 import Chess.Colors
@@ -47,12 +48,13 @@ data Square
     Empty
   | -- | Square occupied with a piece.
     Occ !Piece
-  deriving(Eq, Show)
+  deriving (Eq, Show)
 
--- | Parse a square from a character.
---
--- * A space corresponds to an empty square.
--- * Another character is interpreted like 'Chess.Pieces.parsePiece'.
+{- | Parse a square from a character.
+
+* A space corresponds to an empty square.
+* Another character is interpreted like 'Chess.Pieces.parsePiece'.
+-}
 parseSquare :: Char -> Maybe Square
 parseSquare ' ' = Just Empty
 parseSquare c = parsePiece c >>= Just . Occ
@@ -86,10 +88,10 @@ startingBoard =
   -- Generate a standard position my using the 'parseSquare' function.
   let list = catMaybes $ map parseSquare ("RNBQKBNR" ++ whitePawns ++ emptyLines ++ blackPawns ++ "rnbqkbnr")
    in array ((0, 0), (7, 7)) $ zip ([(x, y) | x <- [0 .. 7], y <- [0 .. 7]]) list
-  where
-    whitePawns = "PPPPPPPP"
-    blackPawns = "pppppppp"
-    emptyLines = replicate (8 * 4) ' '
+ where
+  whitePawns = "PPPPPPPP"
+  blackPawns = "pppppppp"
+  emptyLines = replicate (8 * 4) ' '
 
 -- | Returns the maximum row on the board
 upperRow :: Board -> Int
@@ -99,18 +101,18 @@ upperRow = fst . snd . bounds
 lastRank :: Board -> Color -> Int
 lastRank board col =
   lastRank' col
-  where
-    lastRank' White = upperRow
-    lastRank' Black = lowerRow
-    ((lowerRow, _), (upperRow, _)) = bounds board
+ where
+  lastRank' White = upperRow
+  lastRank' Black = lowerRow
+  ((lowerRow, _), (upperRow, _)) = bounds board
 
 -- | Tests whether or not the given 'Coord' is in the bounds of the given 'Board'.
 isInBounds :: Board -> Coord -> Bool
 isInBounds board (row, col) =
   -- Basically just check every bound.
   lowerRow <= row && row <= upperRow && lowerCol <= col && col <= upperCol
-  where
-    ((lowerRow, lowerCol), (upperRow, upperCol)) = bounds board
+ where
+  ((lowerRow, lowerCol), (upperRow, upperCol)) = bounds board
 
 -- | Direction when fetching a row or column (file).
 data Dir
@@ -119,27 +121,29 @@ data Dir
   | -- | Negative direction (to the left or bottom).
     Neg
 
--- | Return a partial row of the board, starting from the given 'Coord' and
--- going in the given 'Dir' until getting to the edge of the board.
+{- | Return a partial row of the board, starting from the given 'Coord' and
+going in the given 'Dir' until getting to the edge of the board.
+-}
 getPartRow :: Board -> Dir -> Coord -> [(Coord, Square)]
 getPartRow board dir (sRow, sCol) =
   [((sRow, col), board ! (sRow, col)) | col <- [sCol + sign, sCol + sign * 2 .. bound]]
-  where
-    ((_, lowerCol), (_, upperCol)) = bounds board
-    (bound, sign) = case dir of
-      Pos -> (upperCol, 1)
-      Neg -> (lowerCol, -1)
+ where
+  ((_, lowerCol), (_, upperCol)) = bounds board
+  (bound, sign) = case dir of
+    Pos -> (upperCol, 1)
+    Neg -> (lowerCol, -1)
 
--- | Return a partial column (file) of the board, starting from the given
--- 'Coord' and going in the given 'Dir' until getting to the edge of the board.
+{- | Return a partial column (file) of the board, starting from the given
+'Coord' and going in the given 'Dir' until getting to the edge of the board.
+-}
 getPartCol :: Board -> Dir -> Coord -> [(Coord, Square)]
 getPartCol board dir (sRow, sCol) =
   [((row, sCol), board ! (row, sCol)) | row <- [sRow + sign, sRow + sign * 2 .. bound]]
-  where
-    ((lowerRow, _), (upperRow, _)) = bounds board
-    (bound, sign) = case dir of
-      Pos -> (upperRow, 1)
-      Neg -> (lowerRow, -1)
+ where
+  ((lowerRow, _), (upperRow, _)) = bounds board
+  (bound, sign) = case dir of
+    Pos -> (upperRow, 1)
+    Neg -> (lowerRow, -1)
 
 -- | Enum for diagonal directions.
 data DiagDir
@@ -157,12 +161,12 @@ getPartDiag :: Board -> DiagDir -> Coord -> [(Coord, Square)]
 getPartDiag board dir (sRow, sCol) =
   map (\x -> (x, board ! x)) $
     takeWhile (isInBounds board) [(sRow + y, sCol + x) | (y, x) <- zip [signY, signY * 2 ..] [signX, signX * 2 ..]]
-  where
-    (signY, signX) = case dir of
-      NE -> (1, 1)
-      NW -> (1, -1)
-      SW -> (-1, -1)
-      SE -> (-1, 1)
+ where
+  (signY, signX) = case dir of
+    NE -> (1, 1)
+    NW -> (1, -1)
+    SW -> (-1, -1)
+    SE -> (-1, 1)
 
 -- | Get the coordinates of the king of the given color.
 getKingCoord :: Board -> Color -> Coord
@@ -171,14 +175,16 @@ getKingCoord board color =
     Nothing -> error "This board is missing a king!"
     Just c -> fst c
 
--- | Get the list of (`Coord`, `Square`) pairs of squares containing piece of
--- the given `Color`.
+{- | Get the list of (`Coord`, `Square`) pairs of squares containing piece of
+the given `Color`.
+-}
 getSquaresOfCol :: Board -> Color -> [(Coord, Square)]
 getSquaresOfCol board color = filter (((flip isCol) color) . snd) $ assocs board
 
--- | Move a piece from one position to another. This doesn't check the rules.
--- TODO: Remove the error checking and put a pre-condition. This code
--- shouldn't be called with invalid coordinate values
+{- | Move a piece from one position to another. This doesn't check the rules.
+TODO: Remove the error checking and put a pre-condition. This code
+shouldn't be called with invalid coordinate values
+-}
 movePiece :: Board -> Coord -> Coord -> Either String Board
 movePiece board src dst
   | not $ (isInBounds board src) && (isInBounds board dst) = Left "Coordinates are out of bounds"

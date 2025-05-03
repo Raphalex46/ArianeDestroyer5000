@@ -21,8 +21,8 @@ data Bot
 
 -- | The state of a random bot.
 data RandomBotState = RandomBotState
-  { randomState :: StdGen
-  -- ^ The only element in the random state is the random number generator.
+  { -- | The only element in the random state is the random number generator.
+    randomState :: StdGen
   }
 
 -- | Initialize a bot of the given type with its default state.

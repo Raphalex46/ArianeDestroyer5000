@@ -1,14 +1,15 @@
--- | IO counterpart to the 'Chess.Board' module. It contains functions for
--- displaying the board in the terminal.
-module IO.Board
-  ( -- | Show functions.
-    showBoard,
-    showColoredBoard,
-    -- | Convert a normal 'Board' to a 'ColoredBoard'.
-    toColoredBoard,
-    -- | Utilities for 'ColoredBoard'.
-    colorSquares,
-  )
+{- | IO counterpart to the 'Chess.Board' module. It contains functions for
+displaying the board in the terminal.
+-}
+module IO.Board (
+  -- | Show functions.
+  showBoard,
+  showColoredBoard,
+  -- | Convert a normal 'Board' to a 'ColoredBoard'.
+  toColoredBoard,
+  -- | Utilities for 'ColoredBoard'.
+  colorSquares,
+)
 where
 
 import Chess.Board
@@ -34,13 +35,13 @@ showColoredSquare (Nothing, sq) = showSquare sq
 showColoredBoard :: ColoredBoard -> String
 showColoredBoard board =
   unlines $ [columnNames, separator] ++ (intersperse (separator) $ map showRow [7, 6 .. 0]) ++ [separator, columnNames]
-  where
-    hspace = " "
-    columnNames = hspace ++ (concat $ map (\x -> "  " ++ [x] ++ " ") ['A' .. 'H'])
-    separator = hspace ++ (take 32 $ cycle "+---") ++ "+"
-    showRow row =
-      let rowSquares = [board ! (row, i) | i <- [0 .. 7]]
-       in (show $ row + 1) ++ (concat $ map (\x -> "| " ++ showColoredSquare x ++ " ") rowSquares) ++ "|" ++ (show $ row + 1)
+ where
+  hspace = " "
+  columnNames = hspace ++ (concat $ map (\x -> "  " ++ [x] ++ " ") ['A' .. 'H'])
+  separator = hspace ++ (take 32 $ cycle "+---") ++ "+"
+  showRow row =
+    let rowSquares = [board ! (row, i) | i <- [0 .. 7]]
+     in (show $ row + 1) ++ (concat $ map (\x -> "| " ++ showColoredSquare x ++ " ") rowSquares) ++ "|" ++ (show $ row + 1)
 
 -- | Converts a normal 'Board' to a 'String'.
 showBoard :: Board -> String

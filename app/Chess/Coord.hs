@@ -8,17 +8,19 @@ import Text.Read
 -- | Basic type alias for coordinates.
 type Coord = (Int, Int)
 
--- | Converts a column number to a letter.
---
--- Returns 'Nothing' if the given column is out of bounds of a chess board.
+{- | Converts a column number to a letter.
+
+Returns 'Nothing' if the given column is out of bounds of a chess board.
+-}
 _colToLet :: Int -> Maybe Char
 _colToLet i
   | 0 <= i && i <= 7 = find (\x -> ord x == i - ord 'A') ['A' .. 'H']
   | otherwise = Nothing
 
--- | Converts a letter to a column number.
---
--- Returns 'Nothing' if the given letter is not a valid column in chess.
+{- | Converts a letter to a column number.
+
+Returns 'Nothing' if the given letter is not a valid column in chess.
+-}
 letToCol :: Char -> Maybe Int
 letToCol c
   | toUpper c `elem` ['A' .. 'H'] = Just $ ord (toUpper c) - ord 'A'

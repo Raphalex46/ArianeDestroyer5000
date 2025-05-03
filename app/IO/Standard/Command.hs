@@ -1,8 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
--- | This module contains parsing and execution of the 'Standard' mode
--- commands.
+{- | This module contains parsing and execution of the 'Standard' mode
+commands.
+-}
 module IO.Standard.Command (parseCommand, executeCommand) where
 
 import Chess.Board
@@ -10,13 +11,13 @@ import Chess.Coord
 import Chess.GameAnalysis
 import Chess.GameState
 import Chess.Pieces
-import Chess.Rules
 import Chess.Record
+import Chess.Rules
 import Data.Char
 import Data.List
 import IO.Board
-import IO.MoveExpression
 import IO.GameState
+import IO.MoveExpression
 import qualified System.Console.ANSI as ANSI
 
 -- | All possible commands in standard mode.
@@ -25,17 +26,18 @@ data Command
     Show ShowCommand
   | -- | Move a piece from one position to another.
     MovePiece Coord Coord
-    -- | Play a move, with a rule check.
-  | Play MoveExpression
-    -- | Load a new `GameState` from a `FENString`
-  | Load FENString
+  | -- | Play a move, with a rule check.
+    Play MoveExpression
+  | -- | Load a new `GameState` from a `FENString`
+    Load FENString
 
 -- | All possible show commands
 data ShowCommand
   = -- | Display the board in the terminal.
     ShowBoard
-  | -- | Shows the squares attacked by the piece at the given
-    -- 'Coord' with colors.
+  | {- | Shows the squares attacked by the piece at the given
+    'Coord' with colors.
+    -}
     ShowAttacks Coord
   | -- | Shows the squares a piece can legally move to
     ShowValidMoves Coord
@@ -67,11 +69,12 @@ data ExecutionError = InvalidSquare | MoveExpressionError DecodeError | GameErro
 prepareString :: String -> String
 prepareString = map toLower
 
--- | Parse a command
---
--- Returns a 'ParserError' if an error occurs.
--- `isPrefixOf` is used in the following functions to allow the user to enter
--- partial commands
+{- | Parse a command
+
+Returns a 'ParserError' if an error occurs.
+`isPrefixOf` is used in the following functions to allow the user to enter
+partial commands
+-}
 parseCommand :: String -> Either ParserError Command
 parseCommand input =
   case words input of
@@ -82,8 +85,8 @@ parseCommand input =
       -- We don't want to lower the arguments to load because `FENStrings` are case sensitive.
       | cmd `isPrefixOf` "load" -> parseLoadCommand strs
       | otherwise -> Left InvalidCommand
-      where
-        cmd = prepareString str
+     where
+      cmd = prepareString str
     [] -> Left NoCommand
 
 -- | Parse a show command
@@ -94,20 +97,20 @@ parseShowCommand (str : strs)
   | str `isPrefixOf` "board" = parseShowBoardCommand strs
   | str `isPrefixOf` "moves" = parseShowValidMovesCommand strs
   | otherwise = Left InvalidArgument
-  where
-    -- This little function parses a coordinate in the given string, or
-    -- returns an error
-    parseCoordArg [] = Left MissingArgument
-    parseCoordArg [str] = maybe (Left InvalidCoordinates) Right $ parseCoord str
-    parseCoordArg (_ : _) = Left ExtraCharacters
+ where
+  -- This little function parses a coordinate in the given string, or
+  -- returns an error
+  parseCoordArg [] = Left MissingArgument
+  parseCoordArg [str] = maybe (Left InvalidCoordinates) Right $ parseCoord str
+  parseCoordArg (_ : _) = Left ExtraCharacters
 
-    -- For parsing requiring a coordinate argument, we simply call the helper function
-    parseShowAttacksCommand strs = parseCoordArg strs >>= return . Show . ShowAttacks
+  -- For parsing requiring a coordinate argument, we simply call the helper function
+  parseShowAttacksCommand strs = parseCoordArg strs >>= return . Show . ShowAttacks
 
-    parseShowValidMovesCommand strs = parseCoordArg strs >>= return . Show . ShowValidMoves
+  parseShowValidMovesCommand strs = parseCoordArg strs >>= return . Show . ShowValidMoves
 
-    parseShowBoardCommand [] = Right $ Show ShowBoard
-    parseShowBoardCommand _ = Left ExtraCharacters
+  parseShowBoardCommand [] = Right $ Show ShowBoard
+  parseShowBoardCommand _ = Left ExtraCharacters
 parseShowCommand [] = Left MissingArgument
 
 -- | Parse a move command
@@ -132,11 +135,12 @@ parsePlayCommand [] = Left MissingArgument
 parseLoadCommand :: [String] -> Either ParserError Command
 parseLoadCommand strs = Right $ Load $ intercalate " " strs
 
--- | Execute the given 'Command' with the given 'GameState'.
---
--- Returns an 'ExecutionError' if an error occurs.
+{- | Execute the given 'Command' with the given 'GameState'.
+
+Returns an 'ExecutionError' if an error occurs.
+-}
 executeCommand :: GameState -> Command -> Either ExecutionError (IO GameState)
-executeCommand gameState@GameState {..} command =
+executeCommand gameState@GameState{..} command =
   case command of
     -- Simply show the board
     Show (ShowBoard) -> Right $ putStrLn (showState gameState) >> return gameState
@@ -151,7 +155,7 @@ executeCommand gameState@GameState {..} command =
       case movePiece board src dst of
         Right newBoard -> Right $ do
           putStrLn $ showState gameState
-          return gameState {board = newBoard}
+          return gameState{board = newBoard}
         Left _ -> Left $ InvalidSquare
     -- Play a move, with rules check and everything, advancing the game state
     (Play moveExpr) ->
@@ -165,22 +169,22 @@ executeCommand gameState@GameState {..} command =
       case gameStateFromFENString fen of
         Left recordErr -> Left $ LoadError recordErr
         Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
-  where
-    -- Little function to color the given squares according to the color of
-    -- the piece on them.
-    printColoredSquaresOfInterest sqrs coord =
-      do
-        let coloredSquares = zip sqrs (map chooseColor sqrs)
-            coloredBoard = colorSquares (toColoredBoard board) coloredSquares
-        putStrLn $ showColoredBoard coloredBoard
-      where
-        chooseColor coord =
-          case board ! coord of
-            Empty -> ANSI.Green
-            Occ (Piece (color, _)) -> case chosenPieceColor of
-              Nothing -> ANSI.White
-              Just chosenColor -> if chosenColor == color then ANSI.Blue else ANSI.Red
+ where
+  -- Little function to color the given squares according to the color of
+  -- the piece on them.
+  printColoredSquaresOfInterest sqrs coord =
+    do
+      let coloredSquares = zip sqrs (map chooseColor sqrs)
+          coloredBoard = colorSquares (toColoredBoard board) coloredSquares
+      putStrLn $ showColoredBoard coloredBoard
+   where
+    chooseColor coord =
+      case board ! coord of
+        Empty -> ANSI.Green
+        Occ (Piece (color, _)) -> case chosenPieceColor of
+          Nothing -> ANSI.White
+          Just chosenColor -> if chosenColor == color then ANSI.Blue else ANSI.Red
 
-        chosenPieceColor = case board ! coord of
-          Empty -> Nothing
-          Occ (Piece (color, _)) -> Just color
+    chosenPieceColor = case board ! coord of
+      Empty -> Nothing
+      Occ (Piece (color, _)) -> Just color

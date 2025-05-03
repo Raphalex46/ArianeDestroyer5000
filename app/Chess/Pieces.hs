@@ -1,13 +1,13 @@
 -- | Definitions for chess pieces.
-module Chess.Pieces
-  ( -- | Types.
-    PieceType (..),
-    Piece (Piece),
-    -- | 'Piece' and 'PieceType' operations.
-    parsePiece,
-    showPiece,
-    parsePieceType,
-  )
+module Chess.Pieces (
+  -- | Types.
+  PieceType (..),
+  Piece (Piece),
+  -- | 'Piece' and 'PieceType' operations.
+  parsePiece,
+  showPiece,
+  parsePieceType,
+)
 where
 
 import Chess.Colors
@@ -30,22 +30,24 @@ allTypes :: [PieceType]
 allTypes = enumFrom Pawn
 
 -- | A piece is simply a combination of a 'Color' and a 'PieceType'.
-data Piece = Piece (Color, PieceType) deriving(Eq, Show)
+data Piece = Piece (Color, PieceType) deriving (Eq, Show)
 
--- | Converts a 'Char' to a 'PieceType'.
---
--- Returns 'Nothing' if the input character doesn't represent any piece.
+{- | Converts a 'Char' to a 'PieceType'.
+
+Returns 'Nothing' if the input character doesn't represent any piece.
+-}
 parsePieceType :: Char -> Maybe PieceType
 parsePieceType char = case [x | x <- allTypes, getTypeChar x == toUpper char] of
   [] -> Nothing
   x : [] -> Just x
   _ : _ -> error "Unreachable"
 
--- | Converts a 'Char' to a 'Piece'.
---
--- Calls 'parsePieceType'.
--- If the character is lowercase, it is considered a black piece, if it is
--- uppercase, it is considered a white piece.
+{- | Converts a 'Char' to a 'Piece'.
+
+Calls 'parsePieceType'.
+If the character is lowercase, it is considered a black piece, if it is
+uppercase, it is considered a white piece.
+-}
 parsePiece :: Char -> Maybe Piece
 parsePiece char =
   do
