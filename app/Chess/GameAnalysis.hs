@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Various functions to get information about the board.
-module Chess.GameAnalysis (movableSquares, attackedSquares, castleRookPos, isCastlePossible, getSrcCoord, getDstCoord, getRookSide, isKingInCheck) where
+module Chess.GameAnalysis (movableSquares, attackedSquares, castleRookPos, isCastlePossible, getSrcCoord, getDstCoord, getRookSide, isKingInCheck, attackedSquaresByColor) where
 
 import Chess.Board
 import Chess.Colors

@@ -13,7 +13,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -threaded
 
 executable ArianeDestroyer5000
     import:           warnings
@@ -37,12 +37,14 @@ executable ArianeDestroyer5000
                       Player
                       Bot.Bot
                       Bot.Random
+                      Bot.MinMax
     -- other-extensions:
     build-depends:    base ^>=4.19.0.0,
                       array,
                       ansi-terminal,
                       split,
                       optparse-applicative,
-                      random
+                      random,
+                      parallel
     hs-source-dirs:   app
     default-language: Haskell2010

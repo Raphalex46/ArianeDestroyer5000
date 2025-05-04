@@ -1,6 +1,7 @@
 module Main where
 
 import Bot.Bot
+import Bot.MinMax
 import Bot.Random
 import Chess.Colors
 import Chess.Record
@@ -39,3 +40,4 @@ playGame opts =
  where
   botFromPlayerType _ Human = Nothing
   botFromPlayerType gen (Bot Random) = return . RandomBot $ initRandomBot gen
+  botFromPlayerType _ (Bot MinMax) = return . MinMaxBot $ initMinMaxBot
