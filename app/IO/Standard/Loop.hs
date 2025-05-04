@@ -1,9 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Command loop for the 'Standard' mode.
 module IO.Standard.Loop where
 
-import Bot
+import Bot.Bot
 import Chess.Colors
 import Chess.GameState
 import Chess.Rules

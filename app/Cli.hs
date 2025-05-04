@@ -1,7 +1,8 @@
 module Cli (execOptionsParser, Options (..)) where
 
-import Bot
+import Bot.Bot
 import Options.Applicative
+import Player
 
 -- | Command line options record.
 data Options = Options

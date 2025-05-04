@@ -34,7 +34,9 @@ executable ArianeDestroyer5000
                       IO.Standard.Command
                       IO.Standard.Loop
                       Cli
-                      Bot
+                      Player
+                      Bot.Bot
+                      Bot.Random
     -- other-extensions:
     build-depends:    base ^>=4.19.0.0,
                       array,

@@ -1,11 +1,13 @@
 module Main where
 
-import Bot
+import Bot.Bot
+import Bot.Random
 import Chess.Colors
 import Chess.Record
 import Cli
 import IO.GameState
 import IO.Standard.Loop
+import Player
 import System.Random
 
 main :: IO ()
@@ -36,4 +38,4 @@ playGame opts =
         loop config s
  where
   botFromPlayerType _ Human = Nothing
-  botFromPlayerType gen (Bot Random) = return $ initRandomBot gen
+  botFromPlayerType gen (Bot Random) = return . RandomBot $ initRandomBot gen
