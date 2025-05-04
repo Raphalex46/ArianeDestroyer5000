@@ -22,4 +22,4 @@ showStateStatus GameState{..} =
     ++ show fullMoveClock
     ++ "\n"
     ++ "Turns without take or pawn move: "
-    ++ (show $ length history)
+    ++ (show $ halfMoveClock)

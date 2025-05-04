@@ -231,20 +231,13 @@ sufficient for now.
 -}
 isDeadPosition :: Board -> Bool
 isDeadPosition board =
-  all insufficientMaterial allColors || any twoKnightsVsLoneKing allColors
+  all insufficientMaterial allColors
  where
+  -- To be safe, just check lone king versus some basic insufficient material configurations.
   insufficientMaterial col =
-    let pieces = remainingPieceTypes col
-     in -- King of ugly, if we filter the list for only knights, bishops
-        -- and kings and we get a list of lengths smaller than 2, then
-        -- that means we can only have insufficient material.
-        length (filter (\x -> x == King || x == Knight || x == Bishop) pieces) <= 2
-  twoKnightsVsLoneKing col =
-    let pieces = remainingPieceTypes col
-        oppPieces = remainingPieceTypes (opp col)
-     in -- Here, just use list difference (we don't know the order).
-        case pieces \\ [Knight, Knight, King] of
-          [] -> oppPieces == [King]
+    let pieces = remainingPieceTypes $ col
+     in case remainingPieceTypes $ opp col of
+          [King] -> length (filter (\x -> x == King || x == Knight || x == Bishop) pieces) <= 2
           _ -> False
   remainingPieceTypes col =
     foldl
