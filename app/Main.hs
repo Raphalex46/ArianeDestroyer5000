@@ -8,6 +8,7 @@ import Chess.Record
 import Cli
 import IO.GameState
 import IO.Standard.Loop
+import IO.Standard.ProgramState
 import Player
 import System.Random
 
@@ -25,8 +26,8 @@ playGame opts =
       s = case gameStateFromFENString startingFENString of
         Right g -> g
         Left _ -> error "Failed to parse FEN String"
-      config =
-        Config
+      progState =
+        defaultProgState
           { bots =
               ( \c -> case c of
                   White -> botFromPlayerType gen wp
@@ -36,7 +37,7 @@ playGame opts =
      in
       do
         putStrLn $ showState s
-        loop config s
+        loop progState
  where
   botFromPlayerType _ Human = Nothing
   botFromPlayerType gen (Bot Random) = return . RandomBot $ initRandomBot gen

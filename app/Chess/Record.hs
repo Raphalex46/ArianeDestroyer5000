@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Chess.Record (gameStateFromFENString, startingFENString, FENString, RecordParseError) where
+-- | Module for things related to recording and loading games (usually as FEN strings)
+module Chess.Record (gameStateFromFENString, startingFENString, FENString, RecordParseError, getStartingGameState) where
 
 import Data.Char
 import Data.List.Split
@@ -124,8 +125,16 @@ rightsFromFEN str =
     -- Calling this function adds the right to castle to `side` for `col`.
     addToF (col, side) = (\x -> if x == col then side : f x else f x)
 
+-- | Parse EnPassant coordinates from a FEN string.
 enPassantCoordFromFEN :: String -> Either RecordParseError (Maybe Coord)
 enPassantCoordFromFEN "-" = Right Nothing
 enPassantCoordFromFEN str = case parseCoord str of
   Just coord -> Right $ Just coord
   Nothing -> Left $ FENParseError InvalidCoord
+
+-- | Return the initial game state using a starting FEN string.
+getStartingGameState :: GameState
+getStartingGameState =
+  case gameStateFromFENString startingFENString of
+    Left _ -> error "failed to parse starting FEN string (should never happen)"
+    Right gs -> gs

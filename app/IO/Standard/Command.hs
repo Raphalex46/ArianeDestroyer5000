@@ -15,9 +15,8 @@ import Chess.Record
 import Chess.Rules
 import Data.Char
 import Data.List
-import IO.Board
-import IO.GameState
 import IO.MoveExpression
+import IO.Standard.ProgramState
 import qualified System.Console.ANSI as ANSI
 
 -- | All possible commands in standard mode.
@@ -135,56 +134,53 @@ parsePlayCommand [] = Left MissingArgument
 parseLoadCommand :: [String] -> Either ParserError Command
 parseLoadCommand strs = Right $ Load $ intercalate " " strs
 
-{- | Execute the given 'Command' with the given 'GameState'.
+{- | Execute the given 'Command' with the given `ProgramState`.
 
 Returns an 'ExecutionError' if an error occurs.
 -}
-executeCommand :: GameState -> Command -> Either ExecutionError (IO GameState)
-executeCommand gameState@GameState{..} command =
+executeCommand :: ProgramState -> Command -> Either ExecutionError (IO ProgramState)
+executeCommand ps@ProgramState{game = gs@GameState{board = b}} command =
   case command of
     -- Simply show the board
-    Show (ShowBoard) -> Right $ putStrLn (showState gameState) >> return gameState
+    Show (ShowBoard) -> Right $ return ps
     -- For showing stuff, simply use the color function
     Show (ShowAttacks coord) ->
-      Right $ printColoredSquaresOfInterest (attackedSquares board coord) coord >> return gameState
+      Right $ return ps{coloredSquares = colorSquaresOfInterest (attackedSquares b coord) coord}
     -- Show moves that are valid from a coordinate
     Show (ShowValidMoves coord) ->
-      Right $ printColoredSquaresOfInterest (map (getDstCoord board) (validMovesFromCoord gameState coord)) coord >> return gameState
+      Right $ return ps{coloredSquares = colorSquaresOfInterest (map (getDstCoord b) (validMovesFromCoord gs coord)) coord}
     -- Move a piece on the board without rule checks
     (MovePiece src dst) ->
-      case movePiece board src dst of
+      case movePiece b src dst of
         Right newBoard -> Right $ do
-          putStrLn $ showState gameState
-          return gameState{board = newBoard}
+          return ps{game = gs{board = newBoard}, lastMove = Just (src, dst)}
         Left _ -> Left $ InvalidSquare
     -- Play a move, with rules check and everything, advancing the game state
     (Play moveExpr) ->
-      case decodeMoveExpression gameState moveExpr of
+      case decodeMoveExpression gs moveExpr of
         Left err -> Left $ MoveExpressionError err
-        Right move -> case playMove gameState move of
-          Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
+        Right move -> case playMove gs move of
+          Right newGs ->
+            let (src, dst) = (getSrcCoord b move, getDstCoord b move)
+             in Right $ return ps{game = newGs, lastMove = Just (src, dst)}
           Left _ -> Left GameError
     -- Load a `FENString`, replacing the current `GameState`.
     (Load fen) ->
       case gameStateFromFENString fen of
         Left recordErr -> Left $ LoadError recordErr
-        Right newGameState -> Right $ putStrLn (showState newGameState) >> return newGameState
+        Right newGs -> Right $ return ps{game = newGs, lastMove = Nothing}
  where
   -- Little function to color the given squares according to the color of
   -- the piece on them.
-  printColoredSquaresOfInterest sqrs coord =
-    do
-      let coloredSquares = zip sqrs (map chooseColor sqrs)
-          coloredBoard = colorSquares (toColoredBoard board) coloredSquares
-      putStrLn $ showColoredBoard coloredBoard
+  colorSquaresOfInterest sqrs coord = zip sqrs (map chooseColor sqrs)
    where
     chooseColor coord =
-      case board ! coord of
+      case b ! coord of
         Empty -> ANSI.Green
         Occ (Piece (color, _)) -> case chosenPieceColor of
           Nothing -> ANSI.White
           Just chosenColor -> if chosenColor == color then ANSI.Blue else ANSI.Red
 
-    chosenPieceColor = case board ! coord of
+    chosenPieceColor = case b ! coord of
       Empty -> Nothing
       Occ (Piece (color, _)) -> Just color

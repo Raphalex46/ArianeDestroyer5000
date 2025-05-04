@@ -1,16 +1,21 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module IO.GameState (showState) where
+module IO.GameState (showState, showStateStatus) where
 
 import Chess.GameState
 import IO.Board
 
 -- | Print a `GameState`.
 showState :: GameState -> String
-showState GameState{..} =
+showState gs@GameState{..} =
   showBoard board
     ++ "\n"
-    ++ "Active color: "
+    ++ showStateStatus gs
+
+-- | Show every information except the board from a `GameState`.
+showStateStatus :: GameState -> String
+showStateStatus GameState{..} =
+  "Active color: "
     ++ show turn
     ++ "\n"
     ++ "Turn: "

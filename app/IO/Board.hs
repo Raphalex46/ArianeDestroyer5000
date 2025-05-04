@@ -9,6 +9,8 @@ module IO.Board (
   toColoredBoard,
   -- | Utilities for 'ColoredBoard'.
   colorSquares,
+  ColoredBoard,
+  ColoredSquare,
 )
 where
 

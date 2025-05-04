@@ -33,11 +33,12 @@ executable ArianeDestroyer5000
                       IO.Modes
                       IO.Standard.Command
                       IO.Standard.Loop
-                      Cli
-                      Player
+                      IO.Standard.ProgramState
                       Bot.Bot
                       Bot.Random
                       Bot.MinMax
+                      Cli
+                      Player
     -- other-extensions:
     build-depends:    base ^>=4.19.0.0,
                       array,
