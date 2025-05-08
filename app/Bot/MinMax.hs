@@ -10,8 +10,6 @@ import Chess.GameState
 import Chess.Moves
 import Chess.Pieces
 import Chess.Rules
-import Control.Parallel.Strategies
-import Data.Foldable
 
 {- | To keep things simple with the general `Bot` interface,
 we define a state even if we don't use it. It might be useful
@@ -42,31 +40,46 @@ maxScore Black = -inf
 
 -- | Move selection algorithm for the minmax bot.
 selectMoveMinMaxBot :: MinMaxBotState -> GameState -> (Move, MinMaxBotState)
-selectMoveMinMaxBot st gs@GameState{turn = turn} =
-  let possibleStates = (\x -> ((unwrapState . playMove gs) x, x)) <$> getAllValidMoves gs turn
-      -- Run the minmax on each possible move, and get back the move that works best
-      (_, move) = (optBy turn) (\a b -> compare (fst a) (fst b)) $ (\(a, b) -> (minmax a 3, b)) <$> possibleStates
-   in (move, st)
+selectMoveMinMaxBot st gs =
+  let move = snd $ minmax gs 5 (-inf) (inf)
+  in case move of
+    Nothing -> error "No move found??"
+    Just m -> (m, st)
 
 -- | Minmax algorithm implementation.
-minmax :: GameState -> Int -> Score
-minmax gs 0 = eval gs
-minmax gs@GameState{turn = turn} n =
-  let possibleStates = (\x -> (unwrapState . playMove gs) x) <$> getAllValidMoves gs turn
-      scores = parMap rdeepseq (\s -> minmax s (n - 1)) possibleStates
-      best = case scores of
-        [] -> minScore turn
-        s -> (optBy turn) compare $ s
-   in best
+minmax :: GameState -> Int -> Score -> Score -> (Score, Maybe Move)
+minmax gs 0 a b = (eval gs, Nothing)
+minmax gs@GameState{turn = turn} n a b =
+  let moves = getAllValidMoves gs turn
+      (score, move) =
+        case moves of
+          [] -> error "No valid move!"
+          firstMove:_ -> getBestMove (n-1) a b (minScore turn) firstMove gs moves
+    in (score, return move)
+
+-- | Find the best move by running minmax on the child moves.
+-- Performs alpha beta pruning (this is why I implement it as a recursive
+-- function as we need to be able to cutoff the search
+getBestMove :: Int -> Score -> Score -> Score -> Move -> GameState -> [Move] -> (Score, Move)
+getBestMove _ _ _ res mov gs@GameState{turn=turn} [] = (res, mov)
+getBestMove n a b res mov gs@GameState{turn=turn} (curMove:ps)
+  | cutoff turn a b res = (res, mov)
+  | otherwise = let newAlpha = (updateAlpha turn a res)
+                    newBeta = (updateBeta turn b res)
+                    curState = unwrapState . playMove gs $ curMove
+                    (newRes, _) = minmax curState n newAlpha newBeta
+                    (bestRes, bestMove) = if (comp turn) newRes res then (newRes, curMove) else (res, mov)
+                     in getBestMove n newAlpha newBeta bestRes bestMove gs ps
 
 -- | Evaluation function a board.
 eval :: GameState -> Score
 eval gs =
   let mat = materialValue gs White - materialValue gs Black
       win = checkValue gs
+      mob = mobilityValue gs White - mobilityValue gs Black
       con = controlValue gs White - controlValue gs Black
    in -- This is very much random heuristics lol
-      mat * win + con
+      mat + win + con
 
 -- | Point value for each piece.
 pieceValue :: PieceType -> Score
@@ -90,8 +103,8 @@ materialValue GameState{board = board} col =
 -- | Value for checks and checkmates.
 checkValue :: GameState -> Score
 checkValue gs@GameState{board = board}
-  | isKingInCheck' Black = 2.0
-  | isKingInCheck' White = -2.0
+  | isKingInCheck' Black = 0.2
+  | isKingInCheck' White = -0.2
   | isKingInCheckmate' Black = inf
   | isKingInCheckmate' White = -inf
   | otherwise = 0.0
@@ -102,15 +115,33 @@ checkValue gs@GameState{board = board}
 -- | Value for the control of squares on the board.
 controlValue :: GameState -> Color -> Score
 controlValue GameState{board = board} col =
-  let controlled = fromIntegral . length $ attackedSquaresByColor board col
-   in controlled / 10
+  sum . map (\(x, y) -> if x `elem` [3, 4] && y `elem` [3,4] then 0.1 else 0.05) $ attackedSquaresByColor board col
 
-{- | Optimization function (either max or min), return in function of the
-`Color` (`maximum` for `White`, `minimum` for `Black`)
--}
-optBy :: (Foldable t) => Color -> (a -> a -> Ordering) -> t a -> a
-optBy Black = minimumBy
-optBy White = maximumBy
+mobilityValue :: GameState -> Color -> Score
+mobilityValue gs col =
+  (fromIntegral . length $ getAllValidMoves gs col) / 20
+
+-- | Returns the appropriate comparison function according to the color
+-- (whether we want to maximize or minimize score)
+comp :: Ord a => Color -> a -> a -> Bool
+comp White = (>=)
+comp Black = (<=)
+
+-- | Update the alpha value.
+updateAlpha :: Color -> Score -> Score -> Score
+updateAlpha White a s = max a s
+updateAlpha Black a _ = a
+
+-- | Update the beta value.
+updateBeta :: Color -> Score -> Score -> Score
+updateBeta White b _ = b
+updateBeta Black b s = min b s
+
+-- | Returns if we should cutoff the search, given alpha,
+-- beta, and the current score
+cutoff :: Color -> Score -> Score -> Score -> Bool
+cutoff White _ b res = res > b
+cutoff Black a _ res = res < a
 
 {- | Unwrap a state from an either. Crash if an error value is encountered.
 The error case should never occur because we only get boards by playing

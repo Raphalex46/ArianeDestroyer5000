@@ -46,6 +46,5 @@ executable ArianeDestroyer5000
                       split,
                       optparse-applicative,
                       random,
-                      parallel
     hs-source-dirs:   app
     default-language: Haskell2010
