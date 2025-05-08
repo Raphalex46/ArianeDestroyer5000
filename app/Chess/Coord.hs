@@ -1,5 +1,5 @@
 -- | Chess coordinates type definition and associated functions.
-module Chess.Coord (Coord, parseCoord) where
+module Chess.Coord (Coord, parseCoord, distanceSq) where
 
 import Data.Char
 import Data.List
@@ -37,3 +37,7 @@ parseCoord [c, r] =
       then Just (row - 1, col)
       else Nothing
 parseCoord _ = Nothing
+
+-- | Squared distance between two coordinates.
+distanceSq :: Coord -> Coord -> Int
+distanceSq (x1, y1) (x2, y2) = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)
