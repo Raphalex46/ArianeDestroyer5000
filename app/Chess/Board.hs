@@ -32,6 +32,7 @@ module Chess.Board (
   getSquaresOfCol,
   -- | Reexported module for more advanced board manipulations.
   module Data.Array,
+  getRow,
 )
 where
 
@@ -200,3 +201,9 @@ removePiece board coord = board // [(coord, Empty)]
 setPiece :: Board -> Coord -> Piece -> Board
 setPiece board coord piece =
   board // [(coord, Occ piece)]
+
+-- | Get the list of squares in row i of a board.
+getRow :: Board -> Int -> [Square]
+getRow board i =
+  let ((_, lowerCol), (_, upperCol)) = bounds board
+   in [board ! (i, x) | x <- [lowerCol .. upperCol]]

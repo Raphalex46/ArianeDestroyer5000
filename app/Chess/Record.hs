@@ -1,9 +1,11 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Module for things related to recording and loading games (usually as FEN strings)
-module Chess.Record (gameStateFromFENString, startingFENString, FENString, RecordParseError, getStartingGameState) where
+module Chess.Record (gameStateFromFENString, startingFENString, FENString, RecordParseError, getStartingGameState, gameStateToFENString) where
 
 import Data.Char
+import Data.List
 import Data.List.Split
 import Data.Maybe
 import Text.Read
@@ -138,3 +140,53 @@ getStartingGameState =
   case gameStateFromFENString startingFENString of
     Left _ -> error "failed to parse starting FEN string (should never happen)"
     Right gs -> gs
+
+-- | Convert a game state to a FEN String.
+gameStateToFENString :: GameState -> FENString
+gameStateToFENString GameState{..} =
+  -- Convert each part of the gamestate to the right FEN String component
+  intercalate " " [boardToFEN, turnToFEN turn, rightsToFEN White ++ rightsToFEN Black, enPassantToFEN, halfMoveToFEN, fullMoveToFEN]
+ where
+  -- Here, we convert a board to a FEN String
+  boardToFEN =
+    intercalate "/" $ lineToFEN <$> (getRow board) <$> [7, 6 .. 0]
+   where
+    lineToFEN lst =
+      concat $
+        map
+          ( \x -> case x of
+              [] -> ""
+              -- When encountering an empty square, we write the number of consecutive
+              -- empty squares (we just need to count the length of the list
+              -- since we already grouped empty squares
+              Empty : _ -> show $ length x
+              Occ _ : _ ->
+                concat
+                  . map
+                    ( \x -> case x of
+                        Occ p -> showPiece p
+                        Empty -> error "unreachable"
+                    )
+                  $ x
+          )
+          -- Group the squares in the line
+          (group lst)
+  -- The rest of these subfunctions are a pretty straightforward
+  turnToFEN White = "w"
+  turnToFEN Black = "b"
+  rightsToFEN col =
+    let caseFunc = case col of
+          Black -> toLower
+          White -> toUpper
+        CastlingRights f = castlingRights
+     in caseFunc
+          <$> ( \x -> case x of
+                  QueenSide -> 'q'
+                  KingSide -> 'k'
+              )
+          <$> f col
+  enPassantToFEN = case enPassantCoord of
+    Nothing -> "-"
+    Just coord -> showCoord coord
+  halfMoveToFEN = show halfMoveClock
+  fullMoveToFEN = show fullMoveClock
