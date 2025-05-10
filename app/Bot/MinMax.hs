@@ -11,7 +11,10 @@ import Chess.GameState
 import Chess.Moves
 import Chess.Pieces
 import Chess.Rules
+import Control.Parallel.Strategies
+import Control.DeepSeq
 import Data.List
+import Data.List.Split
 
 {- | To keep things simple with the general `Bot` interface,
 we define a state even if we don't use it. It might be useful
@@ -33,6 +36,8 @@ data SearchOut = SearchOut
   { bestScore :: Score,
     bestMove :: Move
   }
+instance NFData SearchOut where
+  rnf a = seq a ()
 
 -- | The score to give to a board.
 type Score = Double
@@ -59,11 +64,15 @@ selectMoveMinMaxBot :: MinMaxBotState -> GameState -> (Move, MinMaxBotState)
 selectMoveMinMaxBot st gs =
   let (firstMove, movesToSearch) = case getAllValidMoves gs (turn gs) of
         [] -> error "No valid move"
-        moves@(m:_) -> (m, moves)
+        moves@(m : _) -> (m, moves)
       SearchOut{bestMove = move} =
-        search
-          SearchIn{depth = 4, alpha = (-inf), beta = inf, gameState = gs}
-          SearchOut{bestMove = firstMove, bestScore = minScore (turn gs)} movesToSearch
+           minmax (turn gs) $ parMap rdeepseq
+              (( search
+                  SearchIn{depth = 4, alpha = (-inf), beta = inf, gameState = gs}
+                  SearchOut{bestMove = firstMove, bestScore = minScore (turn gs)}
+              )
+              . orderMoves gs)
+              (chunksOf (length movesToSearch `div` 4) movesToSearch)
    in (move, st)
 
 -- | Minmax with alpha-beta pruning search function.
@@ -73,22 +82,23 @@ search searchIn@SearchIn{gameState = gs@GameState{turn = rootTurn}, ..} searchOu
   | cutoff rootTurn alpha beta bestScore = searchOut
   | otherwise =
       -- Consider depth 1 to be the base case
-      let moveResult = if depth == 1
-          then
-            SearchOut{bestMove=m, bestScore=eval . (unwrapState . playMove gs) $ m}
-          else
-            let curState = unwrapState . playMove gs $ m
-                movesToSearch = getAllValidMoves curState (turn curState)
-                in case movesToSearch of
-                  [] -> searchOut
-                  moves@(fm:_) -> search searchIn{depth = depth - 1, gameState = curState} SearchOut{bestMove=fm, bestScore=minScore (turn curState)} moves
+      let moveResult =
+            if depth == 1
+              then
+                SearchOut{bestMove = m, bestScore = eval . (unwrapState . playMove gs) $ m}
+              else
+                let curState = unwrapState . playMove gs $ m
+                    movesToSearch = getAllValidMoves curState (turn curState)
+                 in case movesToSearch of
+                      [] -> searchOut
+                      moves@(fm : _) -> search searchIn{depth = depth - 1, gameState = curState} SearchOut{bestMove = fm, bestScore = minScore (turn curState)} moves
        in search (updateSearchIn searchIn moveResult) (updateSearchOut searchOut moveResult) ms
-       where
-        updateSearchIn oldIn@SearchIn{alpha=oldAlpha, beta=oldBeta} SearchOut{bestScore=resScore} =
-          oldIn{alpha = updateAlpha rootTurn oldAlpha resScore, beta = updateBeta rootTurn oldBeta resScore}
-        updateSearchOut oldOut@SearchOut{bestScore = oldBest} SearchOut{bestScore = newBest}
-          | (comp rootTurn) oldBest newBest = oldOut
-          | otherwise = SearchOut{bestScore = newBest, bestMove=m}
+ where
+  updateSearchIn oldIn@SearchIn{alpha = oldAlpha, beta = oldBeta} SearchOut{bestScore = resScore} =
+    oldIn{alpha = updateAlpha rootTurn oldAlpha resScore, beta = updateBeta rootTurn oldBeta resScore}
+  updateSearchOut oldOut@SearchOut{bestScore = oldBest} SearchOut{bestScore = newBest}
+    | (comp rootTurn) oldBest newBest = oldOut
+    | otherwise = SearchOut{bestScore = newBest, bestMove = m}
 
 -- | Evaluation function a board.
 eval :: GameState -> Score
@@ -155,11 +165,11 @@ comp :: (Ord a) => Color -> a -> a -> Bool
 comp White = (>=)
 comp Black = (<=)
 
-minmax :: Color -> [(Score, Move)] -> SearchOut
-minmax col = (optBy col) (\a b -> compare (bestScore a) (bestScore b)) . map (\(s, m) -> SearchOut{bestMove=m, bestScore=s})
-  where
-    optBy White = maximumBy
-    optBy Black = minimumBy
+minmax :: Color -> [SearchOut] -> SearchOut
+minmax col = (optBy col) (\a b -> compare (bestScore a) (bestScore b))
+ where
+  optBy White = maximumBy
+  optBy Black = minimumBy
 
 -- | Update the alpha value.
 updateAlpha :: Color -> Score -> Score -> Score
