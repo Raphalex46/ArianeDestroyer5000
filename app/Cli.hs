@@ -7,7 +7,8 @@ import Player
 -- | Command line options record.
 data Options = Options
   { whitePlayer :: PlayerType,
-    blackPlayer :: PlayerType
+    blackPlayer :: PlayerType,
+    uci :: Bool
   }
 
 -- | Options parser using optparse-applicative.
@@ -27,6 +28,10 @@ options =
           <> metavar "TYPE"
           <> help "Type of player for the black pieces"
           <> value (Bot Random)
+      )
+    <*> switch
+      ( long "uci"
+          <> help "Launch the engine in UCI mode"
       )
 
 -- | Options parser with program description.

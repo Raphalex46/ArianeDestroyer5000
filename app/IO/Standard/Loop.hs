@@ -28,8 +28,8 @@ loop ps@ProgramState{game = gs@GameState{board = curBoard, ..}, ..} =
       do
         progState <- case (bots $ turn) of
           Nothing -> handleHumanPlayer
-          Just bt -> handleBotPlayer bt
-
+          Just bt -> do
+            handleBotPlayer bt
         putStrLn . show $ progState
         loop progState
  where

@@ -9,6 +9,8 @@ import Cli
 import IO.GameState
 import IO.Standard.Loop
 import IO.Standard.ProgramState
+import IO.UCI.Loop
+import IO.UCI.State
 import Player
 import System.Random
 
@@ -17,7 +19,9 @@ main = playGame =<< execOptionsParser
 
 -- | Entry point for the game. Takes the parsed command line options as an argument.
 playGame :: Options -> IO ()
-playGame opts =
+playGame opts 
+  | (uci opts) = startUCI Handshake
+  | otherwise =
   do
     gen <- newStdGen
     let

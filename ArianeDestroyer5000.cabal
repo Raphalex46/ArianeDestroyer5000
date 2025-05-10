@@ -34,6 +34,9 @@ executable ArianeDestroyer5000
                       IO.Standard.Command
                       IO.Standard.Loop
                       IO.Standard.ProgramState
+                      IO.UCI.Loop
+                      IO.UCI.Command
+                      IO.UCI.State
                       Bot.Bot
                       Bot.Random
                       Bot.MinMax
