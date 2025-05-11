@@ -1,5 +1,5 @@
 -- | Chess coordinates type definition and associated functions.
-module Chess.Coord (Coord, parseCoord, distanceSq, showCoord) where
+module Chess.Coord (Coord, parseCoord, distanceSq, showCoord, distanceToCenter) where
 
 import Data.Char
 import Data.List
@@ -52,3 +52,10 @@ showCoord (x, y) =
 -- | Squared distance between two coordinates.
 distanceSq :: Coord -> Coord -> Int
 distanceSq (x1, y1) (x2, y2) = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)
+
+-- | Distance of the square to the center of the board.
+distanceToCenter :: Coord -> Double
+distanceToCenter (x, y) =
+  let xd = fromIntegral x
+      yd = fromIntegral y
+   in (xd - 3.5) * (xd - 3.5) + (yd - 3.5) * (yd - 3.5)

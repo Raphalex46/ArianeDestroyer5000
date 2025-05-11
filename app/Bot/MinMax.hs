@@ -68,7 +68,7 @@ selectMoveMinMaxBot st gs =
       SearchOut{bestMove = move} =
            minmax (turn gs) $ parMap rdeepseq
               (( search
-                  SearchIn{depth = 4, alpha = (-inf), beta = inf, gameState = gs}
+                  SearchIn{depth = 3, alpha = (-inf), beta = inf, gameState = gs}
                   SearchOut{bestMove = firstMove, bestScore = minScore (turn gs)}
               )
               . orderMoves gs)
@@ -117,10 +117,10 @@ eval gs =
     win = winValue gs
     check = checkValue gs
     mob = mobilityValue gs White - mobilityValue gs Black
-    con = (controlValue gs White - matWhite * 2.0) - (controlValue gs Black - matBlack * 2.0)
+    con = controlValue gs White - controlValue gs Black
    in
     -- This is very much random heuristics lol
-    mat + win + 0.2 * check + con + mob
+    100 * mat + win + check + con + mob
 
 -- | Point value for each piece.
 pieceValue :: PieceType -> Score
@@ -158,12 +158,32 @@ winValue gs
 -- | Value for the control of squares on the board.
 controlValue :: GameState -> Color -> Score
 controlValue GameState{board = board} col =
-  sum . map (\(x, y) -> if x `elem` [3, 4] && y `elem` [3, 4] then 1.0 else 0.5) $ attackedSquaresByColor board col
+  let pieces = getSquaresOfCol board col
+    in sum $ map normalizedControlScore pieces
+  where
+    normalizedControlScore (c, sq) =
+      case sq of
+        Empty -> 0.0
+        Occ (Piece (_, pt)) ->
+          (sum $ map weightedSquares (attackedSquares board c)) / (maxControl pt * 3.0)
+    weightedSquares c =
+      1.0 / (distanceToCenter c)
+    maxControl Knight = 8.0
+    maxControl Pawn = 2.0
+    maxControl Queen = 27.0
+    maxControl Rook = 14.0
+    maxControl Bishop = 13.0
+    maxControl King = 8
 
 -- | Mobility = number of available moves
 mobilityValue :: GameState -> Color -> Score
 mobilityValue gs col =
-  fromIntegral . length $ getAllValidMoves gs col
+  sum $ map canMove (getSquaresOfCol (board gs) col)
+  where
+    canMove (c, sq) =
+      case validMovesFromCoord gs c of
+        [] -> 0.0
+        _ -> 1.0
 
 {- | Returns the appropriate comparison function according to the color
 (whether we want to maximize or minimize score)
