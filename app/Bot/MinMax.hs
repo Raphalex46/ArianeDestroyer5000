@@ -72,7 +72,7 @@ selectMoveMinMaxBot st gs =
                   SearchOut{bestMove = firstMove, bestScore = minScore (turn gs)}
               )
               . orderMoves gs)
-              (chunksOf (length movesToSearch `div` 4) movesToSearch)
+              (chunksOf (length movesToSearch `div` 1) movesToSearch)
    in (move, st)
 
 -- | Minmax with alpha-beta pruning search function.
@@ -90,7 +90,14 @@ search searchIn@SearchIn{gameState = gs@GameState{turn = rootTurn}, ..} searchOu
                 let curState = unwrapState . playMove gs $ m
                     movesToSearch = getAllValidMoves curState (turn curState)
                  in case movesToSearch of
-                      [] -> searchOut
+                 -- We hit a terminal node!
+                      [] -> let newScore = case getEndType curState of
+                                  Nothing -> error "no possible moves but game is not ended?"
+                                  Just (Win (col, _)) -> case col of
+                                    Black -> -inf
+                                    White -> inf
+                                  Just (Draw _) -> 0.0
+                        in searchOut{bestScore=newScore}
                       moves@(fm : _) -> search searchIn{depth = depth - 1, gameState = curState} SearchOut{bestMove = fm, bestScore = minScore (turn curState)} moves
        in search (updateSearchIn searchIn moveResult) (updateSearchOut searchOut moveResult) ms
  where
