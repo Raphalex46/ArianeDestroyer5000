@@ -10,6 +10,7 @@ import Chess.Board
 import Chess.Coord
 import Chess.GameAnalysis
 import Chess.GameState
+import Chess.Moves
 import Chess.Pieces
 import Chess.Record
 import Chess.Rules
@@ -27,7 +28,7 @@ data Command
   = -- | A command to show information on the terminal
     Show ShowCommand
   | -- | Move a piece from one position to another.
-    MovePiece Coord Coord
+    MovePieceCommand Coord Coord
   | -- | Play a move, with a rule check.
     Play MoveExpression
   | -- | Load a new `GameState` from a `FENString`
@@ -127,7 +128,7 @@ parseMoveCommand [[c1, r1, c2, r2]] =
     dst <- parseCoord [c2, r2]
     return (src, dst) of
     Nothing -> Left InvalidCoordinates
-    Just (src, dst) -> Right $ MovePiece src dst
+    Just (src, dst) -> Right $ MovePieceCommand src dst
 parseMoveCommand (_ : _) = Left ExtraCharacters
 parseMoveCommand [] = Left MissingArgument
 
@@ -163,7 +164,7 @@ executeCommand ps@ProgramState{game = gs@GameState{board = b}} command =
     Show (ShowValidMoves coord) ->
       Right $ return ps{coloredSquares = colorSquaresOfInterest (map (getDstCoord b) (validMovesFromCoord gs coord)) coord}
     -- Move a piece on the board without rule checks
-    (MovePiece src dst) ->
+    (MovePieceCommand src dst) ->
       case movePiece b src dst of
         Right newBoard -> Right $ do
           return ps{game = gs{board = newBoard}, lastMove = Just (src, dst)}

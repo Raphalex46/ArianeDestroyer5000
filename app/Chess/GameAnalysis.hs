@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Various functions to get information about the board.
-module Chess.GameAnalysis (movableSquares, attackedSquares, castleRookPos, isCastlePossible, getSrcCoord, getDstCoord, getRookSide, isKingInCheck, attackedSquaresByColor) where
+module Chess.GameAnalysis (movableSquares, attackedSquares, castleRookPos, isCastlePossible, getRookSide, isKingInCheck, attackedSquaresByColor) where
 
 import Chess.Board
 import Chess.Colors
@@ -13,22 +13,6 @@ import Chess.Pieces
 takeWhileInclusive :: (a -> Bool) -> [a] -> [a]
 takeWhileInclusive _ [] = []
 takeWhileInclusive pre (x : xs) = if pre x then x : takeWhileInclusive pre xs else [x]
-
-{- | Get source coordinates of the given `Move`.
-
-For any 'normal' move, returns the coordinate of the source moved piece.
-For a castle, returns the coordinate of the castling king.
--}
-getSrcCoord :: Board -> Move -> Coord
-getSrcCoord _ (MovePiece src _) = src
-getSrcCoord _ (Promote src _ _) = src
-getSrcCoord board (Castle color _) = getKingCoord board color
-
--- | Get destination coordinates of the given `Move`.
-getDstCoord :: Board -> Move -> Coord
-getDstCoord _ (MovePiece _ dst) = dst
-getDstCoord _ (Promote _ dst _) = dst
-getDstCoord board (Castle color side) = castleKingDst board color side
 
 {- | Get the side on which a rook is.
 
@@ -73,18 +57,6 @@ castleRookPos board color side =
           QueenSide -> 0
           KingSide -> upperRow board
       )
-
-{- | Returns the destination of the king for a castle of the given `Color` to
-the given `Side`.
-
-The king always moves two columns when castling.
--}
-castleKingDst :: Board -> Color -> Side -> Coord
-castleKingDst board color side =
-  let (row, col) = getKingCoord board color
-   in case side of
-        KingSide -> (row, col + 2)
-        QueenSide -> (row, col - 2)
 
 {- | Returns the list of coordinates of squares that are attacked by all pieces
 of the given `Color`.

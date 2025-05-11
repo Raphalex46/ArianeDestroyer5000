@@ -5,8 +5,8 @@
 module IO.Standard.Loop where
 
 import Bot.Bot
-import Chess.GameAnalysis
 import Chess.GameState
+import Chess.Moves
 import Chess.Rules
 import IO.Standard.Command
 import IO.Standard.ProgramState

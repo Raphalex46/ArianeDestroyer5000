@@ -11,8 +11,8 @@ import Chess.GameState
 import Chess.Moves
 import Chess.Pieces
 import Chess.Rules
-import Control.Parallel.Strategies
 import Control.DeepSeq
+import Control.Parallel.Strategies
 import Data.List
 import Data.List.Split
 
@@ -36,6 +36,7 @@ data SearchOut = SearchOut
   { bestScore :: Score,
     bestMove :: Move
   }
+
 instance NFData SearchOut where
   rnf a = seq a ()
 
@@ -66,13 +67,16 @@ selectMoveMinMaxBot st gs =
         [] -> error "No valid move"
         moves@(m : _) -> (m, moves)
       SearchOut{bestMove = move} =
-           minmax (turn gs) $ parMap rdeepseq
-              (( search
+        minmax (turn gs) $
+          parMap
+            rdeepseq
+            ( ( search
                   SearchIn{depth = 3, alpha = (-inf), beta = inf, gameState = gs}
                   SearchOut{bestMove = firstMove, bestScore = minScore (turn gs)}
               )
-              . orderMoves gs)
-              (chunksOf (length movesToSearch `div` 1) movesToSearch)
+                . orderMoves gs
+            )
+            (chunksOf (length movesToSearch `div` 1) movesToSearch)
    in (move, st)
 
 -- | Minmax with alpha-beta pruning search function.
@@ -90,14 +94,15 @@ search searchIn@SearchIn{gameState = gs@GameState{turn = rootTurn}, ..} searchOu
                 let curState = unwrapState . playMove gs $ m
                     movesToSearch = getAllValidMoves curState (turn curState)
                  in case movesToSearch of
-                 -- We hit a terminal node!
-                      [] -> let newScore = case getEndType curState of
-                                  Nothing -> error "no possible moves but game is not ended?"
-                                  Just (Win (col, _)) -> case col of
-                                    Black -> -inf
-                                    White -> inf
-                                  Just (Draw _) -> 0.0
-                        in searchOut{bestScore=newScore}
+                      -- We hit a terminal node!
+                      [] ->
+                        let newScore = case getEndType curState of
+                              Nothing -> error "no possible moves but game is not ended?"
+                              Just (Win (col, _)) -> case col of
+                                Black -> -inf
+                                White -> inf
+                              Just (Draw _) -> 0.0
+                         in searchOut{bestScore = newScore}
                       moves@(fm : _) -> search searchIn{depth = depth - 1, gameState = curState} SearchOut{bestMove = fm, bestScore = minScore (turn curState)} moves
        in search (updateSearchIn searchIn moveResult) (updateSearchOut searchOut moveResult) ms
  where
@@ -159,31 +164,31 @@ winValue gs
 controlValue :: GameState -> Color -> Score
 controlValue GameState{board = board} col =
   let pieces = getSquaresOfCol board col
-    in sum $ map normalizedControlScore pieces
-  where
-    normalizedControlScore (c, sq) =
-      case sq of
-        Empty -> 0.0
-        Occ (Piece (_, pt)) ->
-          (sum $ map weightedSquares (attackedSquares board c)) / (maxControl pt * 3.0)
-    weightedSquares c =
-      1.0 / (distanceToCenter c)
-    maxControl Knight = 8.0
-    maxControl Pawn = 2.0
-    maxControl Queen = 27.0
-    maxControl Rook = 14.0
-    maxControl Bishop = 13.0
-    maxControl King = 8
+   in sum $ map normalizedControlScore pieces
+ where
+  normalizedControlScore (c, sq) =
+    case sq of
+      Empty -> 0.0
+      Occ (Piece (_, pt)) ->
+        (sum $ map weightedSquares (attackedSquares board c)) / (maxControl pt * 3.0)
+  weightedSquares c =
+    1.0 / (distanceToCenter c)
+  maxControl Knight = 8.0
+  maxControl Pawn = 2.0
+  maxControl Queen = 27.0
+  maxControl Rook = 14.0
+  maxControl Bishop = 13.0
+  maxControl King = 8
 
 -- | Mobility = number of available moves
 mobilityValue :: GameState -> Color -> Score
 mobilityValue gs col =
   sum $ map canMove (getSquaresOfCol (board gs) col)
-  where
-    canMove (c, sq) =
-      case validMovesFromCoord gs c of
-        [] -> 0.0
-        _ -> 1.0
+ where
+  canMove (c, sq) =
+    case validMovesFromCoord gs c of
+      [] -> 0.0
+      _ -> 1.0
 
 {- | Returns the appropriate comparison function according to the color
 (whether we want to maximize or minimize score)
@@ -227,12 +232,3 @@ orderMoves GameState{..} =
             dstA = getDstCoord board a
             dstB = getDstCoord board b
          in compare (distanceSq dstA oppKingPos) (distanceSq dstB oppKingPos)
-
-{- | Unwrap a state from an either. Crash if an error value is encountered.
-The error case should never occur because we only get boards by playing
-valid moves (played with the `getAllValidMoves` function). If an error
-occurs here, that means there is an implementation error somewhere in the game.
--}
-unwrapState :: Either GameError GameState -> GameState
-unwrapState (Right gs) = gs
-unwrapState (Left err) = error (show err)

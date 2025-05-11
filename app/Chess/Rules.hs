@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | Functions for the rules of chess
-module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isKingInStalemate, getEndType, WinType (..), EndGameType (..), DrawType (..), getAllValidMoves) where
+module Chess.Rules (validSquaresFromCoord, validMovesFromCoord, GameError, playMove, isKingInCheckmate, isKingInStalemate, getEndType, WinType (..), EndGameType (..), DrawType (..), getAllValidMoves, unwrapState) where
 
 import Control.Applicative
 import Data.List
@@ -282,3 +282,10 @@ getEndType gs =
   countRep =
     let histState = historyStateFromGameState gs
      in foldl (\cnt x -> if x == histState then cnt + 1 else cnt) 0 $ history gs
+
+{- | A utility function, kind of ugly but useful when
+you're certain the wrapped `GameState` will be valid
+-}
+unwrapState :: Either GameError GameState -> GameState
+unwrapState (Right gs) = gs
+unwrapState (Left err) = error (show err)
