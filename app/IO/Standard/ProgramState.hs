@@ -6,6 +6,7 @@ for the standard loop and terminal display.
 module IO.Standard.ProgramState (ProgramState (..), defaultProgState) where
 
 import Bot.Bot
+import Bot.MinMax
 import Chess.Colors
 import Chess.Coord
 import Chess.GameState
@@ -19,7 +20,8 @@ data ProgramState = ProgramState
   { bots :: (Color -> Maybe Bot),
     lastMove :: Maybe (Coord, Coord),
     game :: GameState,
-    coloredSquares :: [(Coord, ANSI.Color)]
+    coloredSquares :: [(Coord, ANSI.Color)],
+    uciBot :: Bot
   }
 
 -- | A default configuration.
@@ -29,7 +31,8 @@ defaultProgState =
     { bots = (\_ -> Nothing),
       lastMove = Nothing,
       game = getStartingGameState,
-      coloredSquares = []
+      coloredSquares = [],
+      uciBot = MinMaxBot $ initMinMaxBot
     }
 
 instance Show ProgramState where

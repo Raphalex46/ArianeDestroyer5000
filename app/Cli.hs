@@ -8,7 +8,7 @@ import Player
 data Options = Options
   { whitePlayer :: PlayerType,
     blackPlayer :: PlayerType,
-    uci :: Bool
+    uciBotType :: BotType
   }
 
 -- | Options parser using optparse-applicative.
@@ -29,9 +29,12 @@ options =
           <> help "Type of player for the black pieces"
           <> value (Bot Random)
       )
-    <*> switch
-      ( long "uci"
-          <> help "Launch the engine in UCI mode"
+    <*> option
+      auto
+      ( long "uci-bot"
+          <> metavar "BOT"
+          <> help "Use the specified bot for the engin when running in UCI mode"
+          <> value (MinMax)
       )
 
 -- | Options parser with program description.

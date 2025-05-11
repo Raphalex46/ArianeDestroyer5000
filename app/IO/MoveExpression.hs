@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | A module for the way the user inputs moves
-module IO.MoveExpression (parseMoveExpression, MoveExpression, DecodeError, decodeMoveExpression) where
+module IO.MoveExpression (parseMoveExpression, MoveExpression (..), DecodeError, decodeMoveExpression) where
 
 import Chess.Coord
 import Chess.GameState

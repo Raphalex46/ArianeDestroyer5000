@@ -9,8 +9,6 @@ import Cli
 import IO.GameState
 import IO.Standard.Loop
 import IO.Standard.ProgramState
-import IO.UCI.Loop
-import IO.UCI.State
 import Player
 import System.Random
 
@@ -19,9 +17,7 @@ main = playGame =<< execOptionsParser
 
 -- | Entry point for the game. Takes the parsed command line options as an argument.
 playGame :: Options -> IO ()
-playGame opts 
-  | (uci opts) = startUCI Handshake
-  | otherwise =
+playGame opts =
   do
     gen <- newStdGen
     let
@@ -36,7 +32,10 @@ playGame opts
               ( \c -> case c of
                   White -> botFromPlayerType gen wp
                   Black -> botFromPlayerType gen bp
-              )
+              ),
+            uciBot = case botFromPlayerType gen $ Bot (uciBotType opts) of
+              Nothing -> error "Invalid bot for UCI"
+              Just r -> r
           }
      in
       do

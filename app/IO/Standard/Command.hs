@@ -17,6 +17,9 @@ import Data.Char
 import Data.List
 import IO.MoveExpression
 import IO.Standard.ProgramState
+import qualified IO.UCI.Command as UCI
+import IO.UCI.Loop
+import IO.UCI.State
 import qualified System.Console.ANSI as ANSI
 
 -- | All possible commands in standard mode.
@@ -29,6 +32,8 @@ data Command
     Play MoveExpression
   | -- | Load a new `GameState` from a `FENString`
     Load FENString
+  | -- Switch to UCI mode (irreversible)
+    UCI
 
 -- | All possible show commands
 data ShowCommand
@@ -83,6 +88,8 @@ parseCommand input =
       | cmd `isPrefixOf` "play" -> parsePlayCommand $ map prepareString strs
       -- We don't want to lower the arguments to load because `FENStrings` are case sensitive.
       | cmd `isPrefixOf` "load" -> parseLoadCommand strs
+      -- Let's not just take the prefix for this one, cause you don't want to trigger UCI on accident.
+      | cmd == "uci" -> Right UCI
       | otherwise -> Left InvalidCommand
      where
       cmd = prepareString str
@@ -141,6 +148,12 @@ Returns an 'ExecutionError' if an error occurs.
 executeCommand :: ProgramState -> Command -> Either ExecutionError (IO ProgramState)
 executeCommand ps@ProgramState{game = gs@GameState{board = b}} command =
   case command of
+    -- Switch to UCI mode
+    IO.Standard.Command.UCI -> Right $ do
+      state <- UCI.executeGUICommand UCI.UCI $ startingUCIState (uciBot ps)
+      -- Let's just call another infinite loop
+      loopUCI state
+      return ps
     -- Simply show the board
     Show (ShowBoard) -> Right $ return ps
     -- For showing stuff, simply use the color function
