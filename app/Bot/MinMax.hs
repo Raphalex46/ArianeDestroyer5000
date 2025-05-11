@@ -119,13 +119,15 @@ eval gs =
     matWhite = materialValue gs White
     matBlack = materialValue gs Black
     mat = matWhite - matBlack
-    win = winValue gs
     check = checkValue gs
     mob = mobilityValue gs White - mobilityValue gs Black
     con = controlValue gs White - controlValue gs Black
    in
     -- This is very much random heuristics lol
-    100 * mat + win + check + con + mob
+    case getEndType gs of
+      Nothing -> 100 * mat + check + con + mob
+      Just (Win (col, _)) -> maxScore col
+      Just (Draw _) -> 0.0
 
 -- | Point value for each piece.
 pieceValue :: PieceType -> Score
@@ -191,7 +193,7 @@ mobilityValue gs col =
     case validMovesFromCoord gs c of
       [] -> False
       moves -> case sq of
-        Occ (Piece (_, Knight)) -> (length moves) > 3
+        Occ (Piece (_, Knight)) -> (length moves) > 2
         Occ (Piece (_, Bishop)) -> (length moves) > 5
         _ -> True
 
