@@ -183,12 +183,17 @@ controlValue GameState{board = board} col =
 -- | Mobility = number of available moves
 mobilityValue :: GameState -> Color -> Score
 mobilityValue gs col =
-  sum $ map canMove (getSquaresOfCol (board gs) col)
+  sum $ map (toVal . canMove) (getSquaresOfCol (board gs) col)
  where
+  toVal True = 1.0
+  toVal False = 0.0
   canMove (c, sq) =
     case validMovesFromCoord gs c of
-      [] -> 0.0
-      _ -> 1.0
+      [] -> False
+      moves -> case sq of
+        Occ (Piece (_, Knight)) -> (length moves) > 3
+        Occ (Piece (_, Bishop)) -> (length moves) > 5
+        _ -> True
 
 {- | Returns the appropriate comparison function according to the color
 (whether we want to maximize or minimize score)
